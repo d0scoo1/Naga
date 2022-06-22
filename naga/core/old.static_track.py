@@ -1,7 +1,7 @@
 import logging
 
 logger = logging.getLogger()
-from .dep_vars import DepVars
+from .declarations.dep_vars import DepVars
 from slither.slithir.operations import (
     HighLevelCall,
     Index,

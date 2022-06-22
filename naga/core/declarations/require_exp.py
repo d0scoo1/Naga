@@ -1,11 +1,17 @@
 from slither.core.cfg.node import Node
 from slither.slithir.operations.binary import (Binary,BinaryType)
 
-from .dep_vars import DepVars
+
 from slither.slithir.operations import (
     HighLevelCall,Index,InternalCall,Length,LibraryCall,LowLevelCall,Member,OperationWithLValue,Phi,PhiCallback,SolidityCall,Return,Operation,)
+from slither.core.solidity_types.elementary_type import ElementaryType
+from slither.core.solidity_types.mapping_type import MappingType
+from slither.core.declarations import SolidityVariableComposed
 
-def get_requireNodes(node) -> list:
+from .variable_group import (VariableGroup,var_group_combine)
+
+
+def get_requires(node) -> list:
     '''
         一个 require 中可能有多个 && 条件，这等价于多个 require，所以依据 require 中的 && 条件分割成多个 require
     '''
@@ -29,22 +35,43 @@ def get_requireNodes(node) -> list:
     if len(r_node_conds) == 0:
         r_node_conds = [read_vars[0]] # 如果没有 && 条件，则直接使用最后一个 ir 的 read 作为 require
 
-    return [RequireNode(node, rnc, msg) for rnc in r_node_conds]
+    return [RequireExp(node, rnc, msg) for rnc in r_node_conds]
 
-
-class RequireNode(Node):
-    def __init__(self, node, condition,msg):
+from .node_exp import NodeExp
+class RequireExp(NodeExp):
+    def __init__(self, node, condition, msg):
         self.node = node
         self.condition = condition # 每个 require 我们只关心一个 condition
         self.msg = msg # 第二个参数
+        super().__init__(node,tainted_vars = [self.condition])
+        self._owner_candidates = None
+    
+
+    @property
+    def owner_candidates(self):
+        """
+            如果 all_read_vars_group 中 local_vars 为空，state_vars 中有 address 或 mapping(address=>bool)，且 solidity_vars 中存在一个 msg.sender，则我们认为它可能是 owner
+        """
+
+        if self._owner_candidates is not None:
+            return self._owner_candidates
         
-        # actually_vars_read，每个数组对应 condition 中每个的依赖
-        self.cond_read_vars = require_node_track(self.node,[self.condition])[0]
+        self._owner_candidates = []
+
+        if len(self.all_read_vars_group.local_vars) > 0 or SolidityVariableComposed('msg.sender') not in self.all_read_vars_group.solidity_vars:
+            return self._owner_candidates
+
+        for svar in self.all_read_vars_group.state_vars:
+            if svar.type == ElementaryType('address'):
+                self._owner_candidates.append(svar)
+            elif isinstance(svar.type, MappingType) and svar.type.type_from == ElementaryType('address') and svar.type.type_to == ElementaryType('bool'):
+                self._owner_candidates.append(svar)
+        return self._owner_candidates
 
     def __str__(self):
-        return "\nRequireNode: {}\nMsg: {}\n{}".format(self.node,self.msg,self.cond_read_vars)
+        return "\nRequireNode: {}\nMsg: {}\n{}".format(self.node,self.msg,self.all_read_vars_group)
 
-def require_node_track(node, tainted_vars = None):
+def node_track(node, tainted_vars = None):
     '''
         输入一个 require node, 根据 node 找到所有依赖的变量
     '''
@@ -57,7 +84,7 @@ def require_node_track(node, tainted_vars = None):
     if tainted_vars is not None: tainted_vars = [[c] for c in tainted_vars]
     dep_irs_ssa = irs_ssa_track(irs,tainted_vars)
 
-    return [DepVars(dep_irs_ssa = vs) for vs in dep_irs_ssa] # 将每个 irs_ssa 转为 DepVars
+    return [VariableGroup(dep_irs_ssa = vs) for vs in dep_irs_ssa] # 将每个 irs_ssa 转为 DepVars
 
 def irs_ssa_track(irs, tainted_vars=None):
     """

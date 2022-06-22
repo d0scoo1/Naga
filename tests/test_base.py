@@ -30,7 +30,7 @@ from slither.slithir.variables import (
     TupleVariable,
 )
 from slither.core.variables.state_variable import StateVariable
- 
+
 
 
 from slither.core.declarations import (
@@ -40,8 +40,9 @@ from slither.core.declarations import (
     Modifier
 )
 
-from naga.core.function_exp import FunctionExp
-from naga.core.contract_exp import ContractExp
-from naga.core.require_node import *
-from naga.core.type_compare import *
-from naga.core.static_track import *
+from slither.core.solidity_types.elementary_type import ElementaryType
+from slither.core.solidity_types.mapping_type import MappingType
+
+from naga.core.declarations.function_exp import FunctionExp
+from naga.core.declarations.contract_exp import ContractExp
+from naga.core.declarations.require_exp import *

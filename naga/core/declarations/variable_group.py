@@ -16,7 +16,7 @@ from slither.core.variables.state_variable import StateVariable
 from slither.core.variables.local_variable import LocalVariable
 
 
-class DepVars:
+class VariableGroup:
     '''
         一个 node 可能依赖一组变量，我们使用这个类来管理这些变量
     '''
@@ -29,7 +29,7 @@ class DepVars:
         self.constant_vars = []
         self.other_vars = []
         self.__divide_vars()
-    
+
     def __divide_vars(self):
         if self.dep_vars is None and self.dep_irs_ssa is None:
             return
@@ -59,6 +59,16 @@ class DepVars:
 
     def __str__(self):
         return "State Vars:[{}] Local Vars:[{}] Solidity Vars:[{}] Constant:[{}]\n".format(list2str(self.state_vars),list2str(self.local_vars),list2str(self.solidity_vars),list2str(self.constant_vars))
+
+def var_group_combine(varGroups):
+    vg = VariableGroup()
+    for t in varGroups:
+        vg.state_vars += t.state_vars
+        vg.local_vars += t.local_vars
+        vg.solidity_vars += t.solidity_vars
+        vg.constant_vars += t.constant_vars
+        vg.other_vars += t.other_vars
+    return vg
 
 def list2str(l):
     l = [str(i) for i in l]

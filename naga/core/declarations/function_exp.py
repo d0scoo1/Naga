@@ -11,16 +11,29 @@ from slither.core.declarations import (
         SolidityVariable,
         SolidityVariableComposed,
 )
-from .require_node import (get_requireNodes,RequireNode)
-from .static_track import (node_track)
+
+from slither.core.variables.variable import(
+    Variable
+)
+from slither.slithir.operations.event_call import EventCall
+from .require_exp import (get_requires,RequireExp,node_track)
+
 
 class FunctionExp():
     def __init__(self, function: FunctionContract):
         #self.__dict__.update(function.__dict__)
-        self.function = function
-        self._all_require_nodes = None
-        self._requireNodes = None
-        self._only_owner = False
+        self.function:FunctionContract = function
+        self._all_require_nodes:List[Node] = None
+        self.requires:List[RequireExp] = self._get_requires()
+        self.owner_candidates:List = self._get_owner_candidates()
+        self.events = self._get_events()
+
+        self.owners = [] # 如果不为空，则说明只能由 owner 写入
+        self._state_vars_read_in_requires = None
+        self._local_vars_read_in_requires = None
+        self._solidity_vars_read_in_requires = None
+
+
 
     @property
     def all_require_nodes(self):
@@ -35,23 +48,85 @@ class FunctionExp():
             self._all_require_nodes = nodes
         return self._all_require_nodes
 
-    @property
-    def requireNodes(self):
-        if self._requireNodes is None:
-            self._requireNodes = []
-            for node in self.all_require_nodes:
-                self._requireNodes += get_requireNodes(node)
-        return self._requireNodes
+    def _get_requires(self):
+        requires = []
+        for node in self.all_require_nodes:
+            requires += get_requires(node)
+        return requires
 
+
+    def _get_owner_candidates(self):
+        owner_candidates = []
+        for require in self.requires:
+            owner_candidates += require.owner_candidates
+        return owner_candidates
+
+    def _get_events(self) -> List[Event]:
+        events = []
+        for ir in self.function.all_slithir_operations():
+            if isinstance(ir, EventCall):
+                events.append(ir)
+        return events
+
+    def _get_returns(self) -> List[Variable]:
+        returns = []
+
+        for node in self.function.nodes:
+            if node.type == NodeType.RETURN:
+                print(node)
+                all_read_vars_group = node_track(node)
+                print('--',all_read_vars_group)
+          
+
+                
+
+
+    @property
+    def state_vars_read_in_requires(self):
+        if self._state_vars_read_in_requires is not None:
+            return self._state_vars_read_in_requires
+        
+        self._state_vars_read_in_requires = []
+        for exp_req in self.requires:
+            self._state_vars_read_in_requires += exp_req.all_read_vars_group.state_vars
+        return self._state_vars_read_in_requires
+    
+    @property
+    def local_vars_read_in_requires(self):
+        if self._local_vars_read_in_requires is not None:
+            return self._local_vars_read_in_requires
+        
+        self._local_vars_read_in_requires = []
+        for exp_req in self.requires:
+            self._local_vars_read_in_requires += exp_req.all_read_vars_group.local_vars
+        return self._local_vars_read_in_requires
+
+    @property
+    def solidity_vars_read_in_requires(self):
+        if self._solidity_vars_read_in_requires is not None:
+            return self._solidity_vars_read_in_requires
+        
+        self._solidity_vars_read_in_requires = []
+        for exp_req in self.requires:
+            self._solidity_vars_read_in_requires += exp_req.all_read_vars_group.solidity_vars
+        return self._solidity_vars_read_in_requires
+
+    def __str__(self) -> str:
+        return self.function.name
+    '''
     def set_only_owner(self, only_owner: bool):
         self._only_owner = only_owner
     
     @property
     def is_only_owner(self):
         return self._only_owner
+    '''
 
 
 
+
+
+'''
 def _search_related_nodes(node:Node)->List[Node]:
     """
         遍历一个node的所有父节点，如果父节点 lvalue 包含了子节点的 rvalue，则认为两者相关
@@ -147,3 +222,4 @@ def _explore_functions(fun: Function, f_new_values: Callable[["Function"], List]
 
     #return list(set(values))
     return values
+'''

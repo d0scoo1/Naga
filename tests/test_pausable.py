@@ -15,8 +15,8 @@ def test_pauseable():
             for state_variable in f.all_state_variables_written():
                 print("\t w ",state_variable.name)
 
-from naga.core.type_compare import *
-from naga.core.function_exp import (FunctionExp,_search_related_nodes,__search_all_related_nodes)
+
+from naga.core.declarations.function_exp import (FunctionExp,_search_related_nodes,__search_all_related_nodes)
 def find_owners():
     set_solc('0.8.1')
     slither = Slither("tests/contracts/owner_1.sol")
