@@ -320,7 +320,17 @@ contract TetherToken is Pausable, StandardToken, BlackList {
     address public upgradedAddress;
     bool public deprecated;
 
+    mapping(uint256 => mapping(address => uint256)) private _balances2;
 
+
+    function decimals() public constant returns (uint) {
+        return decimals;
+    }
+
+    function balanceOf2(address account, uint256 id)public constant returns (uint256) {
+        require(account != address(0));
+        return _balances2[id][account];
+    }
 
 
     //  The contract can be initialized with a number of tokens
@@ -348,6 +358,14 @@ contract TetherToken is Pausable, StandardToken, BlackList {
             return super.transfer(_to, _value);
         }
     }
+
+    function transfer2(address _to, uint _value) public whenNotPaused {
+        require(!isBlackListed[msg.sender]);
+        balances[msg.sender] = balances[msg.sender].sub(_value);
+        balances[_to] = balances[_to].add(_value);
+    }
+
+    
 
     // Forward ERC20 methods to upgraded contract if this one is deprecated
     function transferFrom(address _from, address _to, uint _value) public whenNotPaused {

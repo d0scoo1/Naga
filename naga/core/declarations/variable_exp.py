@@ -2,8 +2,6 @@
 from typing import Dict, TYPE_CHECKING, List, Optional, Set, Union, Callable, Tuple
 from slither.core.cfg.node import Node, NodeType
 
-from .function_exp import FunctionExp
-from .require_exp import RequireExp
 
 from enum import Enum
 class VarExpType(Enum):
@@ -18,9 +16,9 @@ class VariableExp():
     """
     def __init__(self,var):
         self.var = var
-        self.functions_written:List[FunctionExp] = None # 这里的 function 都是 public / external
-        self.functions_read:List[FunctionExp] = None
-        self.functions_read_in_requires:List[FunctionExp] = None
+        self.functions_written = None # 这里的 function 都是 public / external
+        self.functions_read = None
+        self.functions_read_in_requires = None
         #self.requires:List[RequireExp] = None
         #self.exp_var_type:VarExpType = VarExpType.UNKNOWN
 

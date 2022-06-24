@@ -1,3 +1,4 @@
+
 from typing import Dict, TYPE_CHECKING, List, Optional, Set, Union, Callable, Tuple
 from slither.core.cfg.node import Node, NodeType
 from slither.core.declarations import (
@@ -16,7 +17,11 @@ from slither.core.variables.variable import(
     Variable
 )
 from slither.slithir.operations.event_call import EventCall
-from .require_exp import (get_requires,RequireExp,node_track)
+
+from .variable_exp import VariableExp
+from .require_exp import (get_requires,RequireExp)
+from .node_exp import NodeExp
+from .variable_group import (VariableGroup, var_group_combine)
 
 
 class FunctionExp():
@@ -24,16 +29,16 @@ class FunctionExp():
         #self.__dict__.update(function.__dict__)
         self.function:FunctionContract = function
         self._all_require_nodes:List[Node] = None
-        self.requires:List[RequireExp] = self._get_requires()
-        self.owner_candidates:List = self._get_owner_candidates()
-        self.events = self._get_events()
+        self._requires:List[RequireExp] = None
+        self._owner_candidates:List = None
+        self._events = None
+        self._return_nodes = None
+        self._return_var_group = None
 
         self.owners = [] # 如果不为空，则说明只能由 owner 写入
         self._state_vars_read_in_requires = None
         self._local_vars_read_in_requires = None
         self._solidity_vars_read_in_requires = None
-
-
 
     @property
     def all_require_nodes(self):
@@ -48,38 +53,51 @@ class FunctionExp():
             self._all_require_nodes = nodes
         return self._all_require_nodes
 
-    def _get_requires(self):
-        requires = []
+    @property
+    def requires(self):
+        if self._requires is not None:
+            return self._requires
+        self._requires = []
         for node in self.all_require_nodes:
-            requires += get_requires(node)
-        return requires
+            self._requires += get_requires(node)
+        return self._requires
 
-
-    def _get_owner_candidates(self):
-        owner_candidates = []
+    @property
+    def owner_candidates(self):
+        if self._owner_candidates is not None:
+            return self._owner_candidates
+        self._owner_candidates = []
         for require in self.requires:
-            owner_candidates += require.owner_candidates
-        return owner_candidates
+            self._owner_candidates += require.owner_candidates
+        return self._owner_candidates
 
-    def _get_events(self) -> List[Event]:
-        events = []
+    @property
+    def events(self) -> List[Event]:
+        if self._events is not None: return self._events
+
+        self._events = []
         for ir in self.function.all_slithir_operations():
             if isinstance(ir, EventCall):
-                events.append(ir)
-        return events
+                self._events.append(ir)
+        return self._events
 
-    def _get_returns(self) -> List[Variable]:
-        returns = []
-
+    @property
+    def return_nodes(self) -> List[NodeExp]:
+        if self._return_nodes is not None: return self._return_nodes
+        self._return_nodes = []
         for node in self.function.nodes:
             if node.type == NodeType.RETURN:
-                print(node)
-                all_read_vars_group = node_track(node)
-                print('--',all_read_vars_group)
-          
+                exp_node = NodeExp(node)
+                self._return_nodes.append(exp_node)
+        return self._return_nodes
+    
+    @property
+    def return_var_group(self) -> VariableGroup:
+        if self._return_var_group is not None: return self._return_var_group
 
-                
-
+        self._return_var_group = var_group_combine([exp_node.all_read_vars_group for exp_node in self.return_nodes])
+        return self._return_var_group
+            
 
     @property
     def state_vars_read_in_requires(self):
