@@ -9,8 +9,8 @@ class StateVarType(Enum):
     OWNER = 1
     BWLIST = 2
     PAUSED = 3
-    TOTALSUPPLY = 4
-    BALANCE = 5
+    TOTAL_SUPPLY = 4
+    BALANCES = 5
     ALLOWED = 6
     IDENTIFY = 7
     PARAMETER = 8
@@ -24,10 +24,10 @@ class StateVarType(Enum):
             return "BWLIST"
         if self == StateVarType.PAUSED:
             return "PAUSED"
-        if self == StateVarType.TOTALSUPPLY:
-            return "TOTALSUPPLY"
-        if self == StateVarType.BALANCE:
-            return "BALANCE"
+        if self == StateVarType.TOTAL_SUPPLY:
+            return "TOTAL_SUPPLY"
+        if self == StateVarType.BALANCES:
+            return "BALANCES"
         if self == StateVarType.ALLOWED:
             return "ALLOWED"
         if self == StateVarType.IDENTIFY:
@@ -45,10 +45,10 @@ class StateVariableEXT():
     def __init__(self,svar:StateVariable):
         self.svar:StateVariable = svar
         self.stype = StateVarType.UNKNOWN
-        self.user_read:Boolean = False
-        self.user_write:Boolean = False
-        self.owner_read:Boolean = False
-        self.owner_write:Boolean = False
+        self.is_user_readable:Boolean = False
+        self.is_user_writable:Boolean = False
+        self.is_owner_readable:Boolean = False
+        self.is_owner_writable:Boolean = False
         self.functions_user_read: List["FunctionEXT"] = []
         self.functions_user_written: List["FunctionEXT"] = []
         self.functions_owner_read: List["FunctionEXT"] = []
@@ -64,23 +64,29 @@ class StateVariableEXT():
         self.functions_user_written = []
         self.functions_owner_written = []
         for rf in read_functions:
+            if rf.function.is_constructor: continue
             if len(rf.owners) == 0:
                 self.functions_user_read.append(rf)
             else:
                 self.functions_owner_read.append(rf)
+
         for wf in write_functions:
+            if wf.function.is_constructor: continue
             if len(wf.owners) == 0:
                 self.functions_user_written.append(wf)
             else:
                 self.functions_owner_written.append(wf)
 
-        self.user_read = len(self.functions_user_read) > 0
-        self.user_write = len(self.functions_user_written) > 0
-        self.owner_read = len(self.functions_owner_read) > 0
-        self.owner_write = len(self.functions_owner_written) > 0
+        self.is_user_readable = len(self.functions_user_read) > 0
+        self.is_user_writable = len(self.functions_user_written) > 0
+        self.is_owner_readable = len(self.functions_owner_read) > 0
+        self.is_owner_writable = len(self.functions_owner_written) > 0
 
     def __str__(self) -> str:
-        return '\n State Variable:{},{},user:r:{},w:{},owner:r:{}:w:{}\n'.format(self.svar.name,self.stype,self.user_read,self.user_write,self.owner_read,self.owner_write)
+        return self.svar.name
+
+    def summary(self) -> str:
+        return 'State Variable:{:^20}, Type:{:^12}, User:R:{:^3},W:{:^3}, Owner:R:{:^3},W:{:^3}'.format(self.svar.name[:20],self.stype,self.is_user_readable,self.is_user_writable,self.is_owner_readable,self.is_owner_writable)
 
 
 

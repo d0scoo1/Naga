@@ -119,12 +119,16 @@ def test_compile2(path="/mnt/c/users/vk/naga/tokens/token20"):
 
     sol_path = find_contract_name(addr_path,contracts[address]['ContractName'])
  
-    print()
+    print(sol_path)
     slither = Slither(sol_path)
     naga = Naga(slither)
     naga.summary()
     for c in naga.contracts_erc20:
         print(c.summary())
+        for sve in c.all_ext_state_vars:
+            print(sve.summary())
+        
+
 
 
 if __name__ == "__main__":
