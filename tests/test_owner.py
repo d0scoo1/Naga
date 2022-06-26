@@ -13,7 +13,9 @@ def test_owners():
         print()
         c = ContractExp(c)
         print('contract:', c.contract.name)
-        c.print()
+        print(c.summary())
+
+
 
 
 if __name__ == "__main__":

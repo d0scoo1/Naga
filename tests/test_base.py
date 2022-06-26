@@ -2,7 +2,10 @@ import sys
 sys.path.append(".")
 from solc_utils import set_solc
 from slither import Slither
-
+from tqdm import tqdm
+import os
+import json
+import time
 
 
 from slither.slithir.operations import (
@@ -43,6 +46,6 @@ from slither.core.declarations import (
 from slither.core.solidity_types.elementary_type import ElementaryType
 from slither.core.solidity_types.mapping_type import MappingType
 
-from naga.core.declarations.function_exp import FunctionExp
-from naga.core.declarations.contract_exp import ContractExp
-from naga.core.declarations.require_exp import *
+from naga.core.function_ext import FunctionEXT
+from naga.core.contract_ext import ContractEXT
+from naga.core.require_ext import *

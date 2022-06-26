@@ -18,18 +18,18 @@ from slither.core.variables.variable import(
 )
 from slither.slithir.operations.event_call import EventCall
 
-from .variable_exp import VariableExp
-from .require_exp import (get_requires,RequireExp)
-from .node_exp import NodeExp
+from .variable_ext import VariableEXT
+from .require_ext import (get_requires,RequireEXT)
+from .node_ext import NodeEXT
 from .variable_group import (VariableGroup, var_group_combine)
 
 
-class FunctionExp():
+class FunctionEXT():
     def __init__(self, function: FunctionContract):
         #self.__dict__.update(function.__dict__)
         self.function:FunctionContract = function
         self._all_require_nodes:List[Node] = None
-        self._requires:List[RequireExp] = None
+        self._requires:List[RequireEXT] = None
         self._owner_candidates:List = None
         self._events = None
         self._return_nodes = None
@@ -82,12 +82,12 @@ class FunctionExp():
         return self._events
 
     @property
-    def return_nodes(self) -> List[NodeExp]:
+    def return_nodes(self) -> List[NodeEXT]:
         if self._return_nodes is not None: return self._return_nodes
         self._return_nodes = []
         for node in self.function.nodes:
             if node.type == NodeType.RETURN:
-                exp_node = NodeExp(node)
+                exp_node = NodeEXT(node)
                 self._return_nodes.append(exp_node)
         return self._return_nodes
     

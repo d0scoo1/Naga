@@ -1,16 +1,12 @@
 
-from typing import Dict, TYPE_CHECKING, List, Optional, Set, Union, Callable, Tuple
-from slither.core.cfg.node import Node, NodeType
-
-
 from enum import Enum
-class VarExpType(Enum):
+class VarTypeEXT(Enum):
     UNKNOWN = 0
     OWNER = 1
     BWLIST = 2
     PAUSED = 3
 
-class VariableExp():
+class VariableEXT():
     """
         这个类用于扩展追踪的 var (主要是 state), 以方便的查询变量相关的 读、写、require
     """

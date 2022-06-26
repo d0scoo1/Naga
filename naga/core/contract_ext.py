@@ -1,38 +1,35 @@
 
-from signal import pause
-from typing import Any, Optional, List, Dict, Callable, Tuple, TYPE_CHECKING, Union
-from numpy import uint
+from typing import List, Dict, Tuple
 from slither.core.declarations import Contract
 from slither.core.variables.state_variable import StateVariable
 
-from naga.utils.token import(IERC20_FUNCTIONS_SIG,IERC721_FUNCTIONS_SIG, IERC1155_FUNCTIONS_SIG,)
-from .function_exp import FunctionExp
-from .variable_exp import VariableExp
-from .require_exp import RequireExp
 from slither.core.solidity_types.elementary_type import ElementaryType
 from slither.core.solidity_types.mapping_type import MappingType
+
+from .function_ext import FunctionEXT
+from .require_ext import RequireEXT
+from .erc import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_WRITE_FUNCS_SIG)
 
 # TODO: Non-Unique Identification
 # TODO: Unfair Setting
 # TODO: Unknow Risk
 
-class ContractExp():
+class ContractEXT():
     def __init__(self,contract: Contract):
         self.contract = contract
-        self.functions: List["FunctionExp"] = None # 所有的 entry function
-
+        self.functions: List["FunctionEXT"] = None # 所有的 entry function
         # Function 
-        self.state_var_written_functions: List["FunctionExp"] = None
-        self.state_var_read_functions: List["FunctionExp"] = None
-        self.state_var_written_functions_dict: List["FunctionExp"] = None
-        self.state_var_read_functions_dict: List["FunctionExp"] = None
-        self.state_var_read_in_require_functions_dict: List["FunctionExp"] = None
-        self.state_var_read_require_dict: List["RequireExp"] = None
+        self.state_var_written_functions: List["FunctionEXT"] = None
+        self.state_var_read_functions: List["FunctionEXT"] = None
+        self.state_var_written_functions_dict: List["FunctionEXT"] = None
+        self.state_var_read_functions_dict: List["FunctionEXT"] = None
+        self.state_var_read_in_require_functions_dict: List["FunctionEXT"] = None
+        self.state_var_read_require_dict: List["RequireEXT"] = None
 
-        self.token_written_function_sigs = ["transfer(address,uint256)", "transferFrom(address,address,uint256)","approve(address,uint256)","allowance(address,address)",
-        "setApprovalForAll(address,bool)","safeTransferFrom(address,address,uint256,uint256,bytes)","safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)"
-        ]
-        self.token_written_functions: List["FunctionExp"] = None # 接口中定义的用户的写函数，我们通过这些函数来判定一个 owner 是否为 bwList
+        self.token_write_function_sigs = list(set(ERC20_WRITE_FUNCS_SIG+ERC721_WRITE_FUNCS_SIG+ERC1155_WRITE_FUNCS_SIG))
+        #["transfer(address,uint256)", "transferFrom(address,address,uint256)","approve(address,uint256)","allowance(address,address)","setApprovalForAll(address,bool)","safeTransferFrom(address,address,uint256,uint256,bytes)","safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)"]
+        self.token_written_functions: List["FunctionEXT"] = None # 接口中定义的用户的写函数，我们通过这些函数来判定一个 owner 是否为 bwList 或 paused
+
         self._dividing_functions()
 
         # Owner & BW List
@@ -42,9 +39,9 @@ class ContractExp():
         self._update_function_owners()
 
         # Event
-        self.lack_event_functions: List["FunctionExp"] = []
-        self.lack_event_functions_owner: List["FunctionExp"] = [] # owner 写的 function 缺少 event
-        self.lack_event_functions_user: List["FunctionExp"] = [] # user 写的 function 缺少 event
+        self.lack_event_functions: List["FunctionEXT"] = []
+        self.lack_event_functions_owner: List["FunctionEXT"] = [] # owner 写的 function 缺少 event
+        self.lack_event_functions_user: List["FunctionEXT"] = [] # user 写的 function 缺少 event
         self._serach_lack_event_functions()
 
         # State Variable
@@ -67,9 +64,8 @@ class ContractExp():
         self.balances = self._search_balances()
         self.allowed = self._search_allowed()
         self.identifies = self._search_identifies()
-
-
-
+    
+    
 
     def _dividing_functions(self):
         """
@@ -80,20 +76,21 @@ class ContractExp():
         self.state_var_written_functions = []
         self.state_var_read_functions = []
         for f in self.contract.functions_entry_points: # functions_declared():
-            f = FunctionExp(f)
+            f = FunctionEXT(f)
             self.functions.append(f)
             if len(f.function.all_state_variables_read()) > 0:
                 self.state_var_read_functions.append(f)
             if len(f.function.all_state_variables_written()) > 0:
                 self.state_var_written_functions.append(f)
-
-        # 获取所有的 transfer functions
         
+        
+        # 获取所有的 transfer functions
         self.token_written_functions = []
-        for fs in self.token_written_function_sigs :
+        for fs in self.token_write_function_sigs :
             f = self.get_function_from_signature(fs)
             if f is not None:
                 self.token_written_functions.append(f)
+        
 
         # 获取所有的 state variables
         self.state_var_written_functions_dict = dict()
@@ -101,26 +98,40 @@ class ContractExp():
         self.state_var_read_in_require_functions_dict = dict()
         self.state_var_read_require_dict = dict()
 
-        for svar in self.contract.state_variables:
-            self.state_var_written_functions_dict[svar] = []
-            self.state_var_read_functions_dict[svar] = []
-            self.state_var_read_require_dict[svar] = []
-            self.state_var_read_in_require_functions_dict[svar] = []
+        #for svar in self.contract.state_variables: # self.contract.state_variables 是不完整的
+        #    all_state_vars.append(str(svar))
+            #print(svar,type(svar),hex(id(svar)))
+        
+        all_state_vars = []
+
+        for f in self.functions:
+            for svar in f.function.all_state_variables_written() + f.function.all_state_variables_read():
+                all_state_vars.append(str(svar))
+            for exp_req in f.requires:
+                for svar in exp_req.all_read_vars_group.state_vars:
+                    all_state_vars.append(str(svar))
+        
+        all_state_vars = list(set(all_state_vars))
+        for s in all_state_vars:
+            self.state_var_written_functions_dict[s] = []
+            self.state_var_read_functions_dict[s] = []
+            self.state_var_read_require_dict[s] = []
+            self.state_var_read_in_require_functions_dict[s] = []
 
         for f in self.functions:
             for svar in f.function.all_state_variables_written():
-                self.state_var_written_functions_dict[svar].append(f)
+                self.state_var_written_functions_dict[str(svar)].append(f)
             for svar in f.function.all_state_variables_read():
-                self.state_var_read_functions_dict[svar].append(f)
+                self.state_var_read_functions_dict[str(svar)].append(f)
 
             for exp_req in f.requires:
                 #print(exp_req)
                 for svar in exp_req.all_read_vars_group.state_vars:
-                    self.state_var_read_require_dict[svar].append(exp_req)
-                    self.state_var_read_in_require_functions_dict[svar].append(f)
+                    self.state_var_read_require_dict[str(svar)].append(exp_req)
+                    self.state_var_read_in_require_functions_dict[str(svar)].append(f)
             
-            for key, value in self.state_var_read_in_require_functions_dict.items():
-                self.state_var_read_in_require_functions_dict[key] = list(set(value))
+            for var, value in self.state_var_read_in_require_functions_dict.items():
+                self.state_var_read_in_require_functions_dict[str(var)] = list(set(value))
 
 
     def get_function_from_signature(self, function_signature):
@@ -128,11 +139,11 @@ class ContractExp():
             获取 public / external 函数
         """
         return next(
-            (FunctionExp(f) for f in self.contract.functions if f.full_name == function_signature and not f.is_shadowed),
+            (FunctionEXT(f) for f in self.contract.functions if f.full_name == function_signature and not f.is_shadowed),
             None,
         )
 
-    def get_written_functions(self,state_var) -> List[FunctionExp]:
+    def get_written_functions(self,state_var) -> List[FunctionEXT]:
         return [f for f in self.functions if state_var in f.function.all_state_variables_written()]
 
 
@@ -149,24 +160,27 @@ class ContractExp():
         # 检索所有的 function 查看是否有符合类型的 state variable
         owner_candidates = []
         for f in self.functions:
+            #print('--',f.function.full_name,f.state_vars_read_in_requires)
             for svar in f.owner_candidates:
                 # 检查 candidates 所有的写函数是否被 owner 约束
                 # 如果不是构造函数，并且不存在 owner candidates
                 if any(len(f2.owner_candidates) == 0 and not f2.function.is_constructor
-                    for f2 in self.state_var_written_functions_dict[svar]
+                    for f2 in self.state_var_written_functions_dict[str(svar)]
                     ):
                     continue
                 # 否则，增加到 owner_candidates
                 owner_candidates.append(svar)
+
 
         # 检查每个 owner_candidate 依赖的 owner 是否也属于 owner_candidate
         # 首先找出自我依赖的，然后检查剩余的是否依赖于自我依赖
         owners = []
         for svar in owner_candidates:
             # 检查是否存在自我依赖：owner 的写函数是 owner in require functions 的子集 (上一步中，我们已经确定每个 owner 的写函数都被 owner_candidates 约束)
-            read_in_require_funcs = self.state_var_read_in_require_functions_dict[svar]
+
+            read_in_require_funcs = self.state_var_read_in_require_functions_dict[str(svar)]
             # 去掉 written_funcs 中的构造函数
-            written_funcs =[f for f in self.state_var_written_functions_dict[svar] if not f.function.is_constructor]
+            written_funcs =[f for f in self.state_var_written_functions_dict[str(svar)] if not f.function.is_constructor]
 
             if len(set(written_funcs) - set(read_in_require_funcs)) > 0:
                 continue
@@ -174,11 +188,12 @@ class ContractExp():
         
         # 检查剩余的 owner 是否依赖于 owner
         # 找出每个 candidates 的写函数，得到他们写函数的约束的 owner,如果约束 owner 存在于上述 owner 中，则成立，
+        owners = list(set(owners))
         owner_candidates = list(set(owner_candidates)-set(owners))
         
         for svar in owner_candidates:
             dep_owners = []
-            for t_wf in self.state_var_written_functions_dict[svar]: dep_owners += t_wf.owner_candidates # 这里 构造函数不存在 owners，因此不用管
+            for t_wf in self.state_var_written_functions_dict[str(svar)]: dep_owners += t_wf.owner_candidates # 这里 构造函数不存在 owners，因此不用管
             if len(set(owners) - set(dep_owners)) == 0:
                 owners.append(svar)
 
@@ -208,9 +223,9 @@ class ContractExp():
         """
             更新所有的 function 的 owner
         """
-        for owner in self.owners:
-            for f in self.state_var_read_in_require_functions_dict[owner]:
-                f.owners.append(owner)
+        for svar in self.owners:
+            for f in self.state_var_read_in_require_functions_dict[str(svar)]:
+                f.owners.append(svar)
 
 
     def _serach_lack_event_functions(self):
@@ -303,9 +318,11 @@ class ContractExp():
         paused_candidates = list(set(paused_candidates))
         paused = []
         for svar in paused_candidates:
-            funcs = self.state_var_read_in_require_functions_dict[svar]
+            funcs = self.state_var_read_in_require_functions_dict[str(svar)]
+            #funcs = [f for f in funcs if len(f.owners) == 0] # 去掉 owner 控制的 funcs，查看是否还有剩余 function 由 paused 控制
+            #if len(funcs) > 0:
             funcs_sigs = [f.function.full_name for f in funcs]
-            if len(set(funcs_sigs) & set(self.token_written_function_sigs)) > 0: # 如果变量 require function 出现在 token 写函数中
+            if len(set(funcs_sigs) & set(self.token_write_function_sigs)) > 0: # 如果变量 require function 出现在 token 写函数中
                 paused.append(svar)
         return paused
     
@@ -316,9 +333,9 @@ class ContractExp():
         f = self.get_function_from_signature(f_sig)
         if f is None:
             return None
-        
+
         svars = [svar for svar in f.return_var_group.state_vars if str(svar.type).startswith(type_str)]
-        
+
         if len(svars) == 0:
             return None
         elif len(svars) == 1:
@@ -344,6 +361,7 @@ class ContractExp():
             balances = self.__search_one_state_var_in_return('balanceOf(address,uint256)','mapping(uint256 => mapping(address => uint256))',['balance'])
         
         return balances
+
     def _search_allowed(self):
         """
             搜索 allowance 变量
@@ -380,29 +398,36 @@ class ContractExp():
     
     def state_vars_anlysis(self):
         report = dict()
-        
+
+        self.is_owner_updated_totalSupply = False
         if self.totalSupply in self.svars_owner_updated:
-            print('Owner can update totalSupply')
+            self.is_owner_updated_totalSupply = True
         
+        self.is_owner_updated_balances = False
         if self.balances in self.svars_owner_updated:
-            print('Owner can update balances')
+            self.is_owner_updated_balances = True
         
+        self.is_owner_updated_allowed = False
         if self.allowed in self.svars_owner_updated:
-            print('Owner can update allowed')
+            self.is_owner_updated_allowed = True
         
+        self.owner_updated_identifies = []
         for svar in self.identifies:
             if svar in self.svars_owner_updated:
-                print('Owner can update identifiy,',svar.name)
+                self.owner_updated_identifies.append(svar)
 
     def __str__(self) -> str:
         return self.contract.name
 
-    def print(self):
-
+    def summary(self):
+        self.state_vars_anlysis()
+        all_svars = list(set(self.svars_read + self.svars_written))
+        return '\ncontract:{}\nstate vars:{}\nowner:{}\nbwList:{}\npaused:{}\ntotalSupply:{}\nbalances:{}\nallowed:{}\nidentifies:{}\nOwner can update: totalSupply:{}, balances:{}, allowed:{}, identifies:{}\nlack event functions:{}\n'.format(self.contract.name,list2str(all_svars),list2str(self.owners),list2str(self.bwList),list2str(self.paused), self.totalSupply, self.balances, self.allowed, list2str(self.identifies),self.is_owner_updated_totalSupply,self.is_owner_updated_balances,self.is_owner_updated_allowed,list2str(self.owner_updated_identifies),list2str(self.lack_event_functions))
+        """
         print('owner:',list2str(self.owners))
         print('---- owner written functions ----')
         for svar in self.owners:
-            print(svar.name,":",list2str(self.state_var_written_functions_dict[svar]))
+            print(svar.name,":",list2str(self.state_var_written_functions_dict[str(svar)]))
         print('---- black/white List ----')
         print('bwList:',list2str(self.bwList))
         print('---- lack event functions ----')
@@ -429,8 +454,8 @@ class ContractExp():
         print('allowed:',self.allowed)
         print('identifies:',list2str(self.identifies))
 
-        self.state_vars_anlysis()
-
+        
+        """
 
 
 def list2str(l):

@@ -1,11 +1,10 @@
 from slither.core.cfg.node import Node
-from slither.slithir.operations.binary import (Binary,BinaryType)
 
 from .variable_group import (VariableGroup,var_group_combine)
 from slither.slithir.operations import (
-    HighLevelCall,Index,InternalCall,Length,LibraryCall,LowLevelCall,Member,OperationWithLValue,Phi,PhiCallback,SolidityCall,Return,Operation,Condition)
+    HighLevelCall,Index,InternalCall,EventCall,Length,LibraryCall,LowLevelCall,Member,OperationWithLValue,Phi,PhiCallback,SolidityCall,Return,Operation,Condition,Transfer)
 
-class NodeExp():
+class NodeEXT():
     def __init__(self, node:Node, tainted_vars = None):
         self.node = node
         self.tainted_vars = tainted_vars
@@ -54,9 +53,12 @@ def irs_ssa_track(irs, tainted_vars=None):
 
     while irs:
         ir = irs.pop()
-        if isinstance(ir,(Condition,Return)):
+        if isinstance(ir,(Condition,Return,EventCall,HighLevelCall,LibraryCall,LowLevelCall,SolidityCall,PhiCallback,Transfer)):
             continue
-
+        try:
+            lval = ir.lvalue
+        except:
+            print(ir,type(ir))
         lval = ir.lvalue  # 由于是从 read 开始查找， read 必有左值，所以这里不进行判断
         rval = []
         if isinstance(ir, InternalCall): # 如果是 internalcall

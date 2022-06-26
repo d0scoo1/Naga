@@ -1,16 +1,10 @@
 from slither.core.cfg.node import Node
 from slither.slithir.operations.binary import (Binary,BinaryType)
-
-
-from slither.slithir.operations import (
-    HighLevelCall,Index,InternalCall,Length,LibraryCall,LowLevelCall,Member,OperationWithLValue,Phi,PhiCallback,SolidityCall,Return,Operation,)
 from slither.core.solidity_types.elementary_type import ElementaryType
 from slither.core.solidity_types.mapping_type import MappingType
 from slither.core.declarations import SolidityVariableComposed
 
-from .variable_group import (VariableGroup,var_group_combine)
-
-def get_requires(node) -> list:
+def get_requires(node:Node) -> list:
     '''
         一个 require 中可能有多个 && 条件，这等价于多个 require，所以依据 require 中的 && 条件分割成多个 require
     '''
@@ -34,11 +28,11 @@ def get_requires(node) -> list:
     if len(r_node_conds) == 0:
         r_node_conds = [read_vars[0]] # 如果没有 && 条件，则直接使用最后一个 ir 的 read 作为 require
 
-    return [RequireExp(node, rnc, msg) for rnc in r_node_conds]
+    return [RequireEXT(node, rnc, msg) for rnc in r_node_conds]
 
-from .node_exp import NodeExp
+from .node_ext import NodeEXT
 
-class RequireExp(NodeExp):
+class RequireEXT(NodeEXT):
     def __init__(self, node, condition, msg):
         self.node = node
         self.condition = condition # 每个 require 我们只关心一个 condition
@@ -64,7 +58,7 @@ class RequireExp(NodeExp):
         for svar in self.all_read_vars_group.state_vars:
             if svar.type == ElementaryType('address'):
                 self._owner_candidates.append(svar)
-            elif isinstance(svar.type, MappingType) and svar.type.type_from == ElementaryType('address') and svar.type.type_to == ElementaryType('bool'):
+            elif isinstance(svar.type, MappingType) and svar.type.type_from == ElementaryType('address'): #and svar.type.type_to == ElementaryType('bool'):
                 self._owner_candidates.append(svar)
         return self._owner_candidates
 
