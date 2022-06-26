@@ -52,17 +52,17 @@ class ContractEXT():
         self.all_ext_state_vars: List[StateVariableEXT] = None
         self.ext_state_vars_dict: Dict(StateVariable,StateVariableEXT) = None
 
-        self.state_var_exts_read = []
-        self.state_var_exts_owner_read = []
-        self.state_var_exts_user_read = []
+        self.ext_state_vars_read = []
+        self.ext_state_vars_owner_read = []
+        self.ext_state_vars_user_read = []
 
-        self.state_var_exts_written = []
-        self.state_var_exts_user_written = []
-        self.state_var_exts_owner_updated = [] # 这里使用 updated 而不是 written 是因为，构造函数中，由 owner written 了一些变量， updated 表示不包括构造函数。
+        self.ext_state_vars_written = []
+        self.ext_state_vars_user_written = []
+        self.ext_state_vars_owner_updated = [] # 这里使用 updated 而不是 written 是因为，构造函数中，由 owner written 了一些变量， updated 表示不包括构造函数。
 
-        self.state_var_exts_user_only_read = []
-        self.state_var_exts_user_only_read_owner_updated = []
-        self.state_var_exts_user_written_owner_updated = []
+        self.ext_state_vars_user_only_read = []
+        self.ext_state_vars_user_only_read_owner_updated = []
+        self.ext_state_vars_user_written_owner_updated = []
         self._divding_ext_state_variables()
         self._search_ext_state_variables()
 
@@ -293,45 +293,45 @@ class ContractEXT():
         for sve in self.all_ext_state_vars:
             self.ext_state_vars_dict[sve.svar] = sve
 
-        state_var_exts_read = []
-        state_var_exts_user_read = []
-        state_var_exts_owner_read = []
+        ext_state_vars_read = []
+        ext_state_vars_user_read = []
+        ext_state_vars_owner_read = []
 
-        state_var_exts_written = []
-        state_var_exts_user_written = []
-        state_var_exts_owner_updated = []
+        ext_state_vars_written = []
+        ext_state_vars_user_written = []
+        ext_state_vars_owner_updated = []
 
-        state_var_exts_user_only_read = [] # self.state_var_exts_user_read - self.state_var_exts_user_written
-        state_var_exts_user_only_read_owner_updated = [] #self.state_var_exts_user_only_read & self.state_var_exts_owner_updated
-        state_var_exts_user_written_owner_updated = []
+        ext_state_vars_user_only_read = [] # self.ext_state_vars_user_read - self.ext_state_vars_user_written
+        ext_state_vars_user_only_read_owner_updated = [] #self.ext_state_vars_user_only_read & self.ext_state_vars_owner_updated
+        ext_state_vars_user_written_owner_updated = []
 
         for svar in self.all_ext_state_vars:
             if svar.is_user_readable:
-                state_var_exts_user_read.append(svar)
+                ext_state_vars_user_read.append(svar)
             if svar.is_user_writable:
-                state_var_exts_user_written.append(svar)
+                ext_state_vars_user_written.append(svar)
             if svar.is_owner_readable:
-                state_var_exts_owner_read.append(svar)
+                ext_state_vars_owner_read.append(svar)
             if svar.is_owner_writable:
-                state_var_exts_owner_updated.append(svar)
+                ext_state_vars_owner_updated.append(svar)
         
-        state_var_exts_read = list(set(state_var_exts_user_read + state_var_exts_owner_read))
-        state_var_exts_written = list(set(state_var_exts_user_written + state_var_exts_owner_updated))
-        state_var_exts_user_only_read = list(set(state_var_exts_user_read) - set(state_var_exts_user_written))
-        state_var_exts_user_only_read_owner_updated = list(set(state_var_exts_user_only_read) & set(state_var_exts_owner_updated))
-        state_var_exts_user_written_owner_updated = list(set(state_var_exts_user_written) & set(state_var_exts_owner_updated))
+        ext_state_vars_read = list(set(ext_state_vars_user_read + ext_state_vars_owner_read))
+        ext_state_vars_written = list(set(ext_state_vars_user_written + ext_state_vars_owner_updated))
+        ext_state_vars_user_only_read = list(set(ext_state_vars_user_read) - set(ext_state_vars_user_written))
+        ext_state_vars_user_only_read_owner_updated = list(set(ext_state_vars_user_only_read) & set(ext_state_vars_owner_updated))
+        ext_state_vars_user_written_owner_updated = list(set(ext_state_vars_user_written) & set(ext_state_vars_owner_updated))
 
-        self.state_var_exts_read = state_var_exts_read
-        self.state_var_exts_owner_read =state_var_exts_owner_read
-        self.state_var_exts_user_read = state_var_exts_user_read
+        self.ext_state_vars_read = ext_state_vars_read
+        self.ext_state_vars_owner_read =ext_state_vars_owner_read
+        self.ext_state_vars_user_read = ext_state_vars_user_read
 
-        self.state_var_exts_written = state_var_exts_written
-        self.state_var_exts_user_written = state_var_exts_user_written
-        self.state_var_exts_owner_updated = state_var_exts_owner_updated
+        self.ext_state_vars_written = ext_state_vars_written
+        self.ext_state_vars_user_written = ext_state_vars_user_written
+        self.ext_state_vars_owner_updated = ext_state_vars_owner_updated
 
-        self.state_var_exts_user_only_read = state_var_exts_user_only_read
-        self.state_var_exts_user_only_read_owner_updated = state_var_exts_user_only_read_owner_updated
-        self.state_var_exts_user_written_owner_updated = state_var_exts_user_written_owner_updated
+        self.ext_state_vars_user_only_read = ext_state_vars_user_only_read
+        self.ext_state_vars_user_only_read_owner_updated = ext_state_vars_user_only_read_owner_updated
+        self.ext_state_vars_user_written_owner_updated = ext_state_vars_user_written_owner_updated
 
 
     def __search_one_state_var_in_return(self, f_sig, type_str, svar_lower_names):
@@ -360,7 +360,7 @@ class ContractEXT():
             paused 符合以下特点，出现在 tranfer 的 require 中（没有 local variables 出现在 require 中），bool 类型，只有 owner 可以修改
         """
         paused_candidates = []
-        for sve in self.state_var_exts_user_only_read_owner_updated:
+        for sve in self.ext_state_vars_user_only_read_owner_updated:
             if sve.svar.type == ElementaryType('bool'):
                 paused_candidates.append(sve)
     
@@ -406,7 +406,7 @@ class ContractEXT():
         decimals = self.__search_one_state_var_in_return('decimals()','uint',['decimals'])
         if decimals is not None: identifies.append(decimals)
 
-        for svar in self.state_var_exts_written:
+        for svar in self.ext_state_vars_written:
             if svar.svar.type == ElementaryType('string') and svar.svar.name.lower() in ['name','symbol']:
                 identifies.append(svar)
             elif str(svar.svar.type).startswith('uint'):
