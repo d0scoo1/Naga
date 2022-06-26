@@ -18,7 +18,6 @@ from slither.core.variables.variable import(
 )
 from slither.slithir.operations.event_call import EventCall
 
-from .variable_ext import VariableEXT
 from .require_ext import (get_requires,RequireEXT)
 from .node_ext import NodeEXT
 from .variable_group import (VariableGroup, var_group_combine)

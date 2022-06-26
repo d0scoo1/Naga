@@ -21,10 +21,10 @@ class ContractEXT():
         # Function 
         self.state_var_written_functions: List["FunctionEXT"] = None
         self.state_var_read_functions: List["FunctionEXT"] = None
-        self.state_var_written_functions_dict: List["FunctionEXT"] = None
-        self.state_var_read_functions_dict: List["FunctionEXT"] = None
+        self.state_var_written_functions_dict:Dict(str(StateVariable),["FunctionEXT"]) = None
+        self.state_var_read_functions_dict:Dict(str(StateVariable),["FunctionEXT"]) = None
         self.state_var_read_in_require_functions_dict: List["FunctionEXT"] = None
-        self.state_var_read_require_dict: List["RequireEXT"] = None
+        self.state_var_read_require_dict: Dict(str(StateVariable),["RequireEXT"]) = None
 
         self.token_write_function_sigs = list(set(ERC20_WRITE_FUNCS_SIG+ERC721_WRITE_FUNCS_SIG+ERC1155_WRITE_FUNCS_SIG))
         #["transfer(address,uint256)", "transferFrom(address,address,uint256)","approve(address,uint256)","allowance(address,address)","setApprovalForAll(address,bool)","safeTransferFrom(address,address,uint256,uint256,bytes)","safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)"]
@@ -64,8 +64,8 @@ class ContractEXT():
         self.balances = self._search_balances()
         self.allowed = self._search_allowed()
         self.identifies = self._search_identifies()
-    
-    
+        self.unfair_settings = self._get_unfair_settings() # 其他 owner 可以设置的变量
+
 
     def _dividing_functions(self):
         """
@@ -112,6 +112,7 @@ class ContractEXT():
                     all_state_vars.append(str(svar))
         
         all_state_vars = list(set(all_state_vars))
+        self.all_state_vars = all_state_vars
         for s in all_state_vars:
             self.state_var_written_functions_dict[s] = []
             self.state_var_read_functions_dict[s] = []
@@ -170,7 +171,6 @@ class ContractEXT():
                     continue
                 # 否则，增加到 owner_candidates
                 owner_candidates.append(svar)
-
 
         # 检查每个 owner_candidate 依赖的 owner 是否也属于 owner_candidate
         # 首先找出自我依赖的，然后检查剩余的是否依赖于自我依赖
@@ -234,7 +234,7 @@ class ContractEXT():
             如果一个 function 写了 state variable，则应当发送一个 event，提醒用户，这里寻找缺少的 event 的 function。
             我们并不考虑 event 的参数，关于 event 和实际操作不一致的问题：TokenScope: Automatically Detecting Inconsistent Behaviors of Cryptocurrency Tokens in Ethereum
         """
- 
+
         for f in self.state_var_written_functions:
             if not f.function.is_constructor and len(f.events) == 0:
                 if len(f.owners) == 0:
@@ -302,6 +302,8 @@ class ContractEXT():
         self.svars_user_only_read = svars_user_only_read
         self.svars_user_only_read_owner_updated = svars_user_only_read_owner_updated
         self.svars_user_written_owner_updated = svars_user_written_owner_updated
+
+        
 
 
     def _search_paused(self):
@@ -395,7 +397,12 @@ class ContractEXT():
                     identifies.append(svar)
 
         return list(set(identifies))
-    
+
+    def _get_unfair_settings(self):
+        owner_svars = [ svar for svar in self.svars_user_only_read_owner_updated]
+        return list(set(owner_svars) - set(self.owners)- set(self.bwList)- set(self.paused) - set([self.totalSupply]) - set([self.balances]) - set([self.allowed]) - set(self.identifies))
+
+
     def state_vars_anlysis(self):
         report = dict()
 
@@ -422,7 +429,8 @@ class ContractEXT():
     def summary(self):
         self.state_vars_anlysis()
         all_svars = list(set(self.svars_read + self.svars_written))
-        return '\ncontract:{}\nstate vars:{}\nowner:{}\nbwList:{}\npaused:{}\ntotalSupply:{}\nbalances:{}\nallowed:{}\nidentifies:{}\nOwner can update: totalSupply:{}, balances:{}, allowed:{}, identifies:{}\nlack event functions:{}\n'.format(self.contract.name,list2str(all_svars),list2str(self.owners),list2str(self.bwList),list2str(self.paused), self.totalSupply, self.balances, self.allowed, list2str(self.identifies),self.is_owner_updated_totalSupply,self.is_owner_updated_balances,self.is_owner_updated_allowed,list2str(self.owner_updated_identifies),list2str(self.lack_event_functions))
+        return '\ncontract:{}\nstate vars:{}\nowner:{}\nbwList:{}\npaused:{}\ntotalSupply:{}\nbalances:{}\nallowed:{}\nidentifies:{}\n'\
+        'Owner can update: totalSupply:{}, balances:{}, allowed:{}, identifies:{}, unfair settings:{}\nlack event functions:{}\n'.format(self.contract.name,list2str(all_svars),list2str(self.owners),list2str(self.bwList),list2str(self.paused), self.totalSupply, self.balances, self.allowed, list2str(self.identifies),list2str(self.unfair_settings),self.is_owner_updated_totalSupply,self.is_owner_updated_balances,self.is_owner_updated_allowed,list2str(self.owner_updated_identifies),list2str(self.lack_event_functions))
         """
         print('owner:',list2str(self.owners))
         print('---- owner written functions ----')
