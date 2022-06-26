@@ -55,14 +55,14 @@ def test_compile(path):
                 write_error('\"'+sol_path+'\",\n')
             '''
 
-log_path = 'log.txt'
+log_path = 'logs.txt'
 def write_log(content):
     with open(log_path,"a") as fw:
         fw.write(content)
     fw.close()
 
 def write_error(content):
-    with open('error.txt',"a") as fw:
+    with open('errors.txt',"a") as fw:
         fw.write(content)
     fw.close()
 
