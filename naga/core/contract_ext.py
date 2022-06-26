@@ -321,32 +321,6 @@ class ContractEXT():
         state_var_exts_user_only_read_owner_updated = list(set(state_var_exts_user_only_read) & set(state_var_exts_owner_updated))
         state_var_exts_user_written_owner_updated = list(set(state_var_exts_user_written) & set(state_var_exts_owner_updated))
 
-        """
-        for f in self.state_var_read_functions:
-            svars = f.function.all_state_variables_read()
-            state_var_exts_read += svars
-            if f.function.is_constructor: continue
-            if len(f.owners) > 0: state_var_exts_owner_read += svars
-            else: state_var_exts_user_read += svars
-        state_var_exts_read = list(set(state_var_exts_read))
-        state_var_exts_user_read = list(set(state_var_exts_user_read))
-        state_var_exts_owner_read = list(set(state_var_exts_owner_read))
-
-        for f in self.state_var_written_functions:
-            svars = f.function.all_state_variables_written()
-            state_var_exts_written += svars
-            if f.function.is_constructor: continue
-            if len(f.owners) > 0: state_var_exts_owner_updated += svars
-            else: state_var_exts_user_written += svars
-        state_var_exts_written = list(set(state_var_exts_written))
-        state_var_exts_user_written = list(set(state_var_exts_user_written))
-        state_var_exts_owner_updated = list(set(state_var_exts_owner_updated))
-        
-        state_var_exts_user_only_read = list(set(state_var_exts_user_read)-set(state_var_exts_user_written))
-        state_var_exts_user_only_read_owner_updated = list(set(state_var_exts_user_only_read) & set(state_var_exts_owner_updated))
-        state_var_exts_user_written_owner_updated = list(set(state_var_exts_user_written) & set(state_var_exts_owner_updated))
-        """
-
         self.state_var_exts_read = state_var_exts_read
         self.state_var_exts_owner_read =state_var_exts_owner_read
         self.state_var_exts_user_read = state_var_exts_user_read
@@ -360,30 +334,6 @@ class ContractEXT():
         self.state_var_exts_user_written_owner_updated = state_var_exts_user_written_owner_updated
 
 
-    def _search_paused(self):
-        """
-            搜索所有的 paused
-            paused 符合以下特点，出现在 tranfer 的 require 中（没有 local variables 出现在 require 中），bool 类型，只有 owner 可以修改
-        """
-
-        paused_candidates = []
-        for sve in self.state_var_exts_user_only_read_owner_updated:
-            if sve.svar.type == ElementaryType('bool'):
-                paused_candidates.append(sve)
-    
-        paused_candidates = list(set(paused_candidates))
-        paused = []
-        for sve in paused_candidates:
-            #funcs = self.state_var_read_in_require_functions_dict[svar]
-            funcs = sve.read_in_require_functions
-            #funcs = [f for f in funcs if len(f.owners) == 0] # 去掉 owner 控制的 funcs，查看是否还有剩余 function 由 paused 控制
-            #if len(funcs) > 0:
-            funcs_sigs = [f.function.full_name for f in funcs]
-            if len(set(funcs_sigs) & set(self.token_write_function_sigs)) > 0: # 如果变量 require function 出现在 token 写函数中
-                sve.stype = StateVarType.PAUSED
-                paused.append(sve)
-        return paused
-    
     def __search_one_state_var_in_return(self, f_sig, type_str, svar_lower_names):
         """ 
             查找 return 中的返回值
@@ -403,6 +353,7 @@ class ContractEXT():
                 for name in svar_lower_names:
                     if name in svar.name.lower():
                         return svar
+
     def _search_ext_state_variables(self):
         """
             搜索所有的 paused
@@ -418,23 +369,33 @@ class ContractEXT():
             if len(set(funcs_sigs) & set(self.token_write_function_sigs)) > 0: # 如果变量 require function 出现在 token 写函数中
                 sve.stype = StateVarType.PAUSED
 
-
+        """
+            查找 totalSupply 变量
+        """
         totalsupply = self.__search_one_state_var_in_return('totalSupply()','uint256',['total','supply'])
         if totalsupply is not None:
             self.ext_state_vars_dict[totalsupply].stype = StateVarType.TOTAL_SUPPLY
 
+        """
+            搜索 balance 变量
+        """
         balances = self.__search_one_state_var_in_return('balanceOf(address)','mapping(address => uint256)',['balance'])
         if balances is None:
             balances = self.__search_one_state_var_in_return('balanceOf(address,uint256)','mapping(uint256 => mapping(address => uint256))',['balance'])
         if balances is not None:
             self.ext_state_vars_dict[balances].stype = StateVarType.BALANCES
 
-        
+        """
+            搜索 allowance 变量
+        """
         allowance = self.__search_one_state_var_in_return('allowance(address,address)','mapping(address => mapping(address => uint256))',['allow'])
         if allowance is not None:
             self.ext_state_vars_dict[allowance].stype = StateVarType.ALLOWED
      
-        # identifies
+        """
+            一个代币使用 name 和 symbol 的方式来标识自己，搜索所有的 name 和 symbol
+            ERC20 是标准接口，ERC721 是可选，ERC1155 则不需要
+        """
         identifies = []
         name = self.__search_one_state_var_in_return('name()','string',['name'])
         if name is not None: identifies.append(name)
@@ -454,92 +415,11 @@ class ContractEXT():
 
         for svar in list(set(identifies)):
             self.ext_state_vars_dict[svar].stype = StateVarType.IDENTIFY
-      
-
-    def _search_totalSupply(self):
-        """
-            查找 totalSupply 变量
-        """
-
-        return self.__search_one_state_var_in_return('totalSupply()','uint256',['total','supply'])
-
-    def _search_balances(self):
-        """
-            搜索 balance 变量
-        """
-        balances = self.__search_one_state_var_in_return('balanceOf(address)','mapping(address => uint256)',['balance'])
-        if balances is None:
-            balances = self.__search_one_state_var_in_return('balanceOf(address,uint256)','mapping(uint256 => mapping(address => uint256))',['balance'])
-
-        return balances
-
-    def _search_allowed(self):
-        """
-            搜索 allowance 变量
-        """
-
-        
-        return self.__search_one_state_var_in_return('allowance(address,address)','mapping(address => mapping(address => uint256))',['allow'])
-
-    def _search_identifies(self):
-        """
-            一个代币使用 name 和 symbol 的方式来标识自己，搜索所有的 name 和 symbol
-            ERC20 是标准接口，ERC721 是可选，ERC1155 则不需要
-
-            TODO: 这种判定是不完全的，因为：可能并没有 标准的读操作，但是存在写操作，这样就无法识别，
-            因此需要加上对每个写函数的判定，如果这个写函数是 onlyowner，并且写入了一个 name 或 symbol，则认为是标识
-        """
-        identifies = []
-
-        name = self.__search_one_state_var_in_return('name()','string',['name'])
-        if name is not None: identifies.append(name)
-        
-        symbol = self.__search_one_state_var_in_return('symbol()','string',['symbol'])
-        if symbol is not None: identifies.append(symbol)
-        
-        decimals = self.__search_one_state_var_in_return('decimals()','uint',['decimals'])
-        if decimals is not None: identifies.append(decimals)
-
-        for svar in self.state_var_exts_written:
-            if svar.svar.type == ElementaryType('string') and svar.svar.name.lower() in ['name','symbol']:
-                identifies.append(svar)
-            elif str(svar.svar.type).startswith('uint'):
-                if svar.svar.name.lower() in ['decimals']:
-                    identifies.append(svar)
-
-        return list(set(identifies))
-
-    def _get_unfair_settings(self):
-        owner_svars = [ svar for svar in self.state_var_exts_user_only_read_owner_updated]
-        return list(set(owner_svars) - set(self.owners)- set(self.bwList)- set(self.paused) - set([self.totalSupply]) - set([self.balances]) - set([self.allowed]) - set(self.identifies))
-
-
-    def state_vars_anlysis(self):
-        report = dict()
-
-        self.is_owner_updated_totalSupply = False
-        if self.totalSupply in self.state_var_exts_owner_updated:
-            self.is_owner_updated_totalSupply = True
-        
-        self.is_owner_updated_balances = False
-        if self.balances in self.state_var_exts_owner_updated:
-            self.is_owner_updated_balances = True
-        
-        self.is_owner_updated_allowed = False
-        if self.allowed in self.state_var_exts_owner_updated:
-            self.is_owner_updated_allowed = True
-        
-        self.owner_updated_identifies = []
-        for svar in self.identifies:
-            if svar in self.state_var_exts_owner_updated:
-                self.owner_updated_identifies.append(svar)
 
     def __str__(self) -> str:
         return self.contract.name
 
     def summary(self):
-        
-        
         
         return '\ncontract:{}\nstate vars:{}\nowner:{}\nbwList:{}\nlack event functions:{}\n'.format(self.contract.name,list2str(self.all_ext_state_vars),list2str(self.owners),list2str(self.bwList),list2str(self.lack_event_functions))
         """
