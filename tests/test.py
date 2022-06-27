@@ -40,7 +40,7 @@ def test_compile(path):
             print(sol_path)
             write_log('\n'+sol_path)
             for c in slither.contracts_derived:
-                c = ContractEXT(c)
+                c = ContractExp(c)
                 write_log(c.summary())
 
             '''
@@ -125,12 +125,18 @@ def test_compile2(path="/mnt/c/users/vk/naga/tokens/token20"):
     naga.summary()
     for c in naga.contracts_erc20:
         print(c.summary())
-        for sve in c.all_ext_state_vars:
+        for sve in c.all_exp_state_vars:
             print(sve.summary())
         
 
-
+def test_20():
+    set_solc('0.4.17')
+    slither = Slither("/mnt/d/onedrive/sdu/Research/naga/tests/contracts/token_20_0xdAC17F958D2ee523a2206206994597C13D831ec7.sol")
+    naga = Naga(slither)
+    
+        
 
 if __name__ == "__main__":
     #test_compile('/mnt/c/users/vk/naga/tokens/token20')
-    test_compile2()
+    #test_compile2()
+    test_20()

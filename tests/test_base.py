@@ -46,6 +46,4 @@ from slither.core.declarations import (
 from slither.core.solidity_types.elementary_type import ElementaryType
 from slither.core.solidity_types.mapping_type import MappingType
 
-from naga.core.function_ext import FunctionEXT
-from naga.core.contract_ext import ContractEXT
-from naga.core.require_ext import *
+
