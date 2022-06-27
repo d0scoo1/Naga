@@ -33,15 +33,16 @@ def test_compile(path):
         for addr in os.listdir(version_path):
             addr_path = os.path.join(version_path, addr)
 
-            sol_path = find_contract_name(addr_path,contracts[addr]['ContractName'])
+            sol_path = find_contract_file(addr_path,contracts[addr]['ContractName'])
 
-            slither = Slither(sol_path)
+            naga = Naga(Slither(sol_path),contracts[addr]['ContractName'])
+            if len(naga.main_contracts) != 1:
+                print('#',len(naga.main_contracts),sol_path)
 
-            print(sol_path)
-            write_log('\n'+sol_path)
-            for c in slither.contracts_derived:
-                c = ContractExp(c)
-                write_log(c.summary())
+            #print(sol_path)
+            #write_log('\n'+sol_path)
+            
+                #write_log(c.summary())
 
             '''
             try:
@@ -66,7 +67,7 @@ def write_error(content):
         fw.write(content)
     fw.close()
 
-def find_contract_name(addr_path,contractName):
+def find_contract_file(addr_path,contractName):
     sol_path = os.path.join(addr_path,contractName+".sol")
     if os.path.exists(sol_path):
         return sol_path
@@ -117,7 +118,7 @@ def test_compile2(path="/mnt/c/users/vk/naga/tokens/token20"):
     for i in ss[0:-1]:
         addr_path = addr_path + i + '/'
 
-    sol_path = find_contract_name(addr_path,contracts[address]['ContractName'])
+    sol_path = find_contract_file(addr_path,contracts[address]['ContractName'])
  
     print(sol_path)
     slither = Slither(sol_path)
@@ -127,16 +128,15 @@ def test_compile2(path="/mnt/c/users/vk/naga/tokens/token20"):
         print(c.summary())
         for sve in c.all_exp_state_vars:
             print(sve.summary())
-        
 
 def test_20():
-    set_solc('0.4.17')
-    slither = Slither("/mnt/d/onedrive/sdu/Research/naga/tests/contracts/token_20_0xdAC17F958D2ee523a2206206994597C13D831ec7.sol")
+    set_solc('0.5.10')
+    slither = Slither("/mnt/c/users/vk/naga/tokens/token20/contracts/0.5.10/0x2ef52ed7de8c5ce03a4ef0efbe9b7450f2d7edc9/callbackSelector.sol")
     naga = Naga(slither)
-    
-        
+
+
 
 if __name__ == "__main__":
-    #test_compile('/mnt/c/users/vk/naga/tokens/token20')
+    test_compile('/mnt/c/users/vk/naga/tokens/token20')
     #test_compile2()
-    test_20()
+    #test_20()

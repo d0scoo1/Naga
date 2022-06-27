@@ -1,5 +1,6 @@
 
-from typing import List, Dict
+
+from typing import List, Dict,Optional
 from slither.core.declarations import Contract
 from slither.core.variables.state_variable import StateVariable
 
@@ -17,9 +18,11 @@ from naga.core.erc import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_
 class ContractExp():
     def __init__(self,contract: Contract):
         self.contract = contract
-        self.is_upgradeable = False
         self.functions: List["FunctionExp"] = None # 所有的 entry functions
-        
+        self._is_erc20: Optional[bool] = None
+        self._is_erc721: Optional[bool] = None
+        self._is_erc1155: Optional[bool] = None
+
         self.state_var_written_functions: List["FunctionExp"] = None
         self.state_var_read_functions: List["FunctionExp"] = None
         self.state_var_written_functions_dict:Dict("StateVariable",["FunctionExp"]) = None
@@ -64,7 +67,44 @@ class ContractExp():
         self.lack_event_functions_owner: List["FunctionExp"] = [] # owner 写的 function 缺少 event
         self.lack_event_functions_user: List["FunctionExp"] = [] # user 写的 function 缺少 event
         self._serach_lack_event_functions()
+    
+    @property
+    def is_erc20(self) -> bool:
+        funcs_sig = [f.full_name for f in self.contract.functions_entry_points]
+        if self._is_erc20 is None:
+            if len(set(ERC20_WRITE_FUNCS_SIG) - set(funcs_sig)) == 0:
+                self._is_erc20 = True
+            else:
+                self._is_erc20 = False
+        return self._is_erc20
+    
+    @property
+    def is_erc721(self) -> bool:
+        funcs_sig = [f.full_name for f in self.contract.functions_entry_points]
+        if self._is_erc721 is None:
+            if len(set(ERC721_WRITE_FUNCS_SIG) - set(funcs_sig)) == 0:
+                self._is_erc721 = True
+            else:
+                self._is_erc721 = False
+        return self._is_erc721
 
+    @property
+    def is_erc1155(self) -> bool:
+        funcs_sig = [f.full_name for f in self.contract.functions_entry_points]
+        if self._is_erc1155 is None:
+            if len(set(ERC1155_WRITE_FUNCS_SIG) - set(funcs_sig)) == 0:
+                self._is_erc1155 = True
+            else:
+                self._is_erc1155 = False
+        return self._is_erc1155
+    
+    @property
+    def is_upgradeable(self) -> bool:
+        return self.contract.is_upgradeable
+    
+    @property
+    def is_upgradeable_proxy(self) -> bool:
+        return self.contract.is_upgradeable_proxy
 
     def _dividing_functions(self):
         """
@@ -219,23 +259,6 @@ class ContractExp():
             for f in self.state_var_read_in_require_functions_dict[svar]:
                 f.owners.append(svar)
 
-    def _serach_lack_event_functions(self):
-        """
-            TODO:需要再次确认， owner 的函数是否需要 event
-            如果一个 function 写了 state variable，则应当发送一个 event，提醒用户，这里寻找缺少的 event 的 function。
-            我们并不考虑 event 的参数，关于 event 和实际操作不一致的问题：TokenScope: Automatically Detecting Inconsistent Behaviors of Cryptocurrency Tokens in Ethereum
-        """
-
-        for f in self.state_var_written_functions:
-            if not f.function.is_constructor and len(f.events) == 0:
-                if len(f.owners) == 0:
-                    self.lack_event_functions_user.append(f)
-                else:
-                    self.lack_event_functions_owner.append(f)
-
-        self.lack_event_functions = self.lack_event_functions_owner + self.lack_event_functions_user
-
-    
     def _divding_exp_state_vars(self):
         """
             搜索用户调用的标准接口中所有读写的变量，如：手续费，balance，
@@ -306,20 +329,18 @@ class ContractExp():
             查找 return 中的返回值
         """
         f = self.get_function_from_signature(f_sig)
-        if f is None:
-            return None
+        candidates = []
+        if f is not None:
+            candidates = [svar for svar in f.return_var_group.state_vars if str(svar.type).startswith(type_str)]
+            if len(candidates) == 1:
+                return candidates[0]
 
-        svars = [svar for svar in f.return_var_group.state_vars if str(svar.type).startswith(type_str)]
-
-        if len(svars) == 0:
-            return None
-        elif len(svars) == 1:
-            return svars[0]
-        else:
-            for svar in svars:
-                for name in svar_lower_names:
-                    if name in svar.name.lower():
-                        return svar
+        for svar in candidates + self.all_state_variables:
+            #print('---',svar.name.lower(),'total' in svar.name.lower())
+            for name in svar_lower_names:
+                if name in svar.name.lower():
+                    return svar
+        return None
 
     def _search_exp_state_vars(self):
         """
@@ -339,9 +360,10 @@ class ContractExp():
         """
             查找 totalSupply 变量
         """
-        totalsupply = self.__search_one_state_var_in_return('totalSupply()','uint256',['total','supply'])
+        totalsupply = self.__search_one_state_var_in_return('totalSupply()','uint256',['totalsupply'])
         if totalsupply is not None:
             self.svar_exp_svar_dict[totalsupply].stype = StateVarType.TOTAL_SUPPLY
+          
 
         """
             搜索 balance 变量
@@ -387,15 +409,45 @@ class ContractExp():
             unfair_settings: 如果一个变量是 uint 类型，我们认为是 unfair_settings
         """
         for evar in self.exp_state_vars_owner_updated:
-            if evar.state_variable.type.startswith('uint'):
-                evar.stype = StateVarType.UNFAIR_SETTINGS
+            if str(evar.stype != StateVarType.UNKNOWN): continue
+            if str(evar.state_variable.type).startswith('uint'):
+                evar.stype = StateVarType.UNFAIR_SETTING
+
+    
+
+    def _serach_lack_event_functions(self):
+        """
+            TODO:需要再次确认， owner 的函数是否需要 event
+            如果一个 function 写了 state variable，则应当发送一个 event，提醒用户，这里寻找缺少的 event 的 function。
+            我们并不考虑 event 的参数，关于 event 和实际操作不一致的问题：TokenScope: Automatically Detecting Inconsistent Behaviors of Cryptocurrency Tokens in Ethereum
+        """
+
+        for f in self.state_var_written_functions:
+            if not f.function.is_constructor and len(f.events) == 0:
+                if len(f.owners) == 0:
+                    self.lack_event_functions_user.append(f)
+                else:
+                    self.lack_event_functions_owner.append(f)
+        self.lack_event_functions = self.lack_event_functions_owner + self.lack_event_functions_user
 
     def __str__(self) -> str:
         return self.contract.name
 
     def summary(self):
+        paused = []
+        for evar in self.all_exp_state_vars:
+            if evar.stype == StateVarType.PAUSED:
+                paused.append(evar)
+        total = []
+        for evar in self.all_exp_state_vars:
+            if evar.stype == StateVarType.TOTAL_SUPPLY:
+                total.append(evar)
         
-        return '\ncontract:{}\nstate vars:{}\nowner:{}\nbwList:{}\nlack event functions:{}\n'.format(self.contract.name,list2str(self.all_exp_state_vars),list2str(self.owners),list2str(self.bwList),list2str(self.lack_event_functions))
+        for evar in self.all_exp_state_vars:
+            print(evar.summary())
+                
+        
+        return '\ncontract:{}\nstate vars:{}\nowner:{}\nbwList:{}\npaused:{}\ntotalSupply:{}\nlack event functions:{}\n'.format(self.contract.name,list2str(self.all_exp_state_vars),list2str(self.owners),list2str(self.bwList),list2str(paused),list2str(total),list2str(self.lack_event_functions))
         """
         return '\ncontract:{}\nstate vars:{}\nowner:{}\nbwList:{}\npaused:{}\ntotalSupply:{}\nbalances:{}\nallowed:{}\nidentifies:{}\n'\
         'Owner can update: totalSupply:{}, balances:{}, allowed:{}, identifies:{}, unfair settings:{}\nlack event functions:{}\n'.format(self.contract.name,list2str(self.all_exp_state_vars),list2str(self.owners),list2str(self.bwList),list2str(self.paused), self.totalSupply, self.balances, self.allowed, list2str(self.identifies),list2str(self.unfair_settings),self.is_owner_updated_totalSupply,self.is_owner_updated_balances,self.is_owner_updated_allowed,list2str(self.owner_updated_identifies),list2str(self.lack_event_functions))
