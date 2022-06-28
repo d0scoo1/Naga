@@ -1,22 +1,18 @@
 
 
 from typing import List, Dict,Optional
-from pyrsistent import s
 from slither.core.declarations import Contract
 from slither.core.variables.state_variable import StateVariable
 
-from slither.core.solidity_types.elementary_type import ElementaryType
-from slither.core.solidity_types.mapping_type import MappingType
-
 from .function_exp import FunctionExp
 from .require_exp import RequireExp
-from .state_variable_exp import (StateVarType,StateVariableExp)
 from naga.core.erc import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_WRITE_FUNCS_SIG)
 
 
 class ContractExp():
-    def __init__(self,contract: Contract):
+    def __init__(self,contract: Contract,contract_address: None):
         self.contract = contract
+        self.contract_address = contract_address
         self._is_erc20: Optional[bool] = None
         self._is_erc721: Optional[bool] = None
         self._is_erc1155: Optional[bool] = None
@@ -52,6 +48,13 @@ class ContractExp():
         return self._is_erc1155
     
     @property
+    def get_erc_str(self):
+        if self.is_erc20: return 'erc20'
+        if self.is_erc721: return 'erc721'
+        if self.is_erc1155: return 'erc1155'
+        return 'none'
+    
+    @property
     def is_upgradeable(self) -> bool:
         return self.contract.is_upgradeable
     
@@ -63,21 +66,45 @@ class ContractExp():
         return self.contract.name
 
     #######################################
-    ####   我们手动执行 detect 的方法   ####
+    ####    我们手动执行 detect 方法    ####
     #######################################
 
-    def _detect_init(self):
-        self._dividing_functions()
-        self._search_owners_bwList()
-        self._divding_exp_state_vars()
-        self._search_paused()
-    
-    def detect_erc20(self):
-        self._detect_init()
-        self._search_erc20()
-        self._serach_unfair_settings()
-        self._serach_lack_event_functions()
+    from naga.core.detectors import (
+        detect_owners_bwList,detect_paused,
+        detect_erc20_state_vars,detect_erc721_state_vars,detect_erc1155_state_vars,
+        detect_unfair_settings,detect_lack_event_functions,)
 
+    def _before_detect_erc_svars(self):
+        self.label_svars_dict = dict() # 通过 label 查找对应的变量
+
+        self._dividing_functions()
+
+        self.detect_owners_bwList()
+        self._owner_in_require_functions = None
+
+        self._divde_state_vars() # after detect_owners_bwList
+
+        self.detect_paused()
+
+    def _after_detect_erc_svars(self):
+        #self.detect_unfair_settings()
+        self.detect_lack_event_functions()
+        self._svar2label()
+
+    def detect_erc20(self):
+        self._before_detect_erc_svars()
+        self.detect_erc20_state_vars()
+        self._after_detect_erc_svars()
+    
+    def detect_erc721(self):
+        self._before_detect_erc_svars()
+        self.detect_erc721_state_vars()
+        self._after_detect_erc_svars()
+    
+    def detect_erc1155(self):
+        self._before_detect_erc_svars()
+        self.detect_erc1155_state_vars()
+        self._after_detect_erc_svars()
 
     def _dividing_functions(self):
         """
@@ -90,7 +117,7 @@ class ContractExp():
         self.state_var_read_functions_dict:Dict("StateVariable",["FunctionExp"]) = dict()
         self.state_var_read_in_require_functions_dict: Dict("StateVariable",["FunctionExp"]) = dict()
         self.state_var_read_in_requires_dict: Dict("StateVariable",["RequireExp"]) = dict()
-        self.all_state_variables: List["StateVariable"] = []
+        self.all_state_vars: List["StateVariable"] = []
 
         self.token_write_function_sigs = list(set(ERC20_WRITE_FUNCS_SIG+ERC721_WRITE_FUNCS_SIG+ERC1155_WRITE_FUNCS_SIG))
         self.token_written_functions: List["FunctionExp"] = [] # 接口中定义的用户的写函数，我们通过这些函数来判定一个 owner 是否为 bwList 或 paused
@@ -109,16 +136,16 @@ class ContractExp():
             if f is not None:
                 self.token_written_functions.append(f)
         
-        all_state_variables = []
+        all_state_vars = []
         for f in self.functions:
             for svar in f.function.all_state_variables_written() + f.function.all_state_variables_read():
-                all_state_variables.append(svar)
+                all_state_vars.append(svar)
             for exp_req in f.requires:
                 for svar in exp_req.all_read_vars_group.state_vars:
-                    all_state_variables.append(svar)
+                    all_state_vars.append(svar)
 
-        self.all_state_variables = list(set(all_state_variables))
-        for s in self.all_state_variables:
+        self.all_state_vars = list(set(all_state_vars))
+        for s in self.all_state_vars:
             self.state_var_written_functions_dict[s] = []
             self.state_var_read_functions_dict[s] = []
             self.state_var_read_in_requires_dict[s] = []
@@ -148,335 +175,130 @@ class ContractExp():
             None,
         )
 
-    def _search_owners_bwList(self):
-        """
-            搜索所有的 owners
-            1. owner 需要是 state variable
-            2. owner 的类型是 address 或 mapping()
-            3. owner 如果存在写函数，
-                3.1 为构造函数
-            或 3.2 写函数被 require约束，且约束条件中仅包含 state var, msg.sender
-        """
-                # Owner & BW List
-        self.owners: List["StateVariable"] = []
-        self.bwList: List["StateVariable"] = []
-        self._owner_in_require_functions = None
-
-        # 检索所有的 function 查看是否有符合类型的 state variable
-        owner_candidates = []
-        for f in self.functions:
-            #print('--',f.function.full_name,f.state_vars_read_in_requires)
-            for svar in f.owner_candidates:
-                # 检查 candidates 所有的写函数是否被 owner 约束
-                # 如果不是构造函数，并且不存在 owner candidates
-                if any(len(f2.owner_candidates) == 0 and not f2.function.is_constructor
-                    for f2 in self.state_var_written_functions_dict[svar]
-                    ):
-                    continue
-                # 否则，增加到 owner_candidates
-                owner_candidates.append(svar)
-
-        # 检查每个 owner_candidate 依赖的 owner 是否也属于 owner_candidate
-        # 首先找出自我依赖的，然后检查剩余的是否依赖于自我依赖
-        owners = []
-        for svar in owner_candidates:
-            # 检查是否存在自我依赖：owner 的写函数是 owner in require functions 的子集 (上一步中，我们已经确定每个 owner 的写函数都被 owner_candidates 约束)
-
-            read_in_require_funcs = self.state_var_read_in_require_functions_dict[svar]
-            # 去掉 written_funcs 中的构造函数
-            written_funcs =[f for f in self.state_var_written_functions_dict[svar] if not f.function.is_constructor]
-
-            if len(set(written_funcs) - set(read_in_require_funcs)) > 0:
-                continue
-            owners.append(svar)
-        
-        # 检查剩余的 owner 是否依赖于 owner
-        # 找出每个 candidates 的写函数，得到他们写函数的约束的 owner,如果约束 owner 存在于上述 owner 中，则成立，
-        owners = list(set(owners))
-        owner_candidates = list(set(owner_candidates)-set(owners))
-
-        for svar in owner_candidates:
-            dep_owners = []
-            for t_wf in self.state_var_written_functions_dict[svar]: dep_owners += t_wf.owner_candidates # 这里 构造函数不存在 owner_candidates
-            if len(set(owners) - set(dep_owners)) == 0:
-                owners.append(svar)
-
-        # 如果有 mapping，则需要检查是否为 bwList
-        mapping_owners = []
-        for svar in owners:
-            if isinstance(svar.type, MappingType):
-                mapping_owners.append(svar)
-        if len(mapping_owners) == 0:
-            self.owners = owners
-            return
-
-        # blackList / whiteList 和 admin 有相同的模式，因此，需要排除 blackList / whiteList
-        # 具体而言，我们检查 token_written_functions 中出现的 mapping owner candidates，如果和 owners 中匹配，我们认为它是 blackList / whiteList 而不是 owner
-        bwList = []
-
-        for ef in self.token_written_functions:
-            for svar in ef.owner_candidates:
-                #if isinstance(svar.type, MappingType) and svar.type.type_from == ElementaryType('address') and svar.type.type_to == ElementaryType('bool'):
-                if svar in mapping_owners:
-                    bwList.append(svar)
-
-        self.owners = list(set(owners)-set(bwList))
-        self.bwList = list(set(bwList))
-
+    '''
+    def _update_function_owners(self):
+        for owner in self.owners:
+            for f in self.state_var_read_in_require_functions_dict[owner]:
+                f.owners.append(owner)
+    '''
     @property
     def owner_in_require_functions(self):
         if self._owner_in_require_functions is None:
             owner_in_require_functions = []
-            for svar in self.owners:
+            for svar in self.label_svars_dict['owners']:
                 owner_in_require_functions += self.state_var_read_in_require_functions_dict[svar]
             self._owner_in_require_functions = list(set(owner_in_require_functions))
         return self._owner_in_require_functions
 
-    def _divding_exp_state_vars(self):
+
+    def _divde_state_vars(self):
+
         """
             搜索用户调用的标准接口中所有读写的变量，如：手续费，balance，
             如果一个变量用户可以写，而owner也可以写（例如 balance），那么说明 owner 可以操纵用户数据，（潜在的风险是，owner 泄露时，黑客可以转走钱）
-
             如果一个变量用户不能写，但是 owner 可以写，我们认为这个变量是约束变量，例如 paused, 手续费等
             如果这些变量，owner 也可以修改，则这些变量是 unfair_settings
-
             用户可以写，owner 也可以写，用户不能写， owner 可以写
         """
-        self.all_exp_state_vars: List["StateVariableExp"] = []
-        self.svar_exp_svar_dict: Dict("StateVariable","StateVariableExp") = dict()
+        svars_read = []
+        svars_user_read = []
+        svars_owner_read = []
 
-        self.exp_state_vars_read: List["StateVariableExp"] = []
-        self.exp_state_vars_owner_read: List["StateVariableExp"] = []
-        self.exp_state_vars_user_read: List["StateVariableExp"] = []
+        svars_written = []
+        svars_user_written = []
+        svars_owner_updated = []
 
-        self.exp_state_vars_written: List["StateVariableExp"] = []
-        self.exp_state_vars_user_written: List["StateVariableExp"] = []
-        self.exp_state_vars_owner_updated: List["StateVariableExp"] = [] # 这里使用 updated 而不是 written 是因为，构造函数中，由 owner written 了一些变量， updated 表示不包括构造函数。
+        svars_user_only_read = [] # self.svars_user_read - self.svars_user_written
+        svars_user_only_read_owner_updated = [] #self.svars_user_only_read & self.svars_owner_updated
+        svars_user_written_owner_updated = []
 
-        self.exp_state_vars_user_only_read: List["StateVariableExp"] = []
-        self.exp_state_vars_user_only_read_owner_updated: List["StateVariableExp"] = []
-        self.exp_state_vars_user_written_owner_updated: List["StateVariableExp"] = []
-
-        for svar in self.owners:
-            self.all_exp_state_vars.append(StateVariableExp(svar,self,StateVarType.OWNER))
-
-        for svar in self.bwList:
-            self.all_exp_state_vars.append(StateVariableExp(svar,self,StateVarType.BWLIST))
-
-        for svar in list(set(self.all_state_variables)-set(self.owners + self.bwList)):
-            self.all_exp_state_vars.append(StateVariableExp(svar,self))
-        
-        self.svar_exp_svar_dict = dict()
-        for sve in self.all_exp_state_vars:
-            self.svar_exp_svar_dict[sve.state_variable] = sve
-
-        exp_state_vars_read = []
-        exp_state_vars_user_read = []
-        exp_state_vars_owner_read = []
-
-        exp_state_vars_written = []
-        exp_state_vars_user_written = []
-        exp_state_vars_owner_updated = []
-
-        exp_state_vars_user_only_read = [] # self.exp_state_vars_user_read - self.exp_state_vars_user_written
-        exp_state_vars_user_only_read_owner_updated = [] #self.exp_state_vars_user_only_read & self.exp_state_vars_owner_updated
-        exp_state_vars_user_written_owner_updated = []
-
-        for svar in self.all_exp_state_vars:
-            if svar.is_user_read:
-                exp_state_vars_user_read.append(svar)
-            if svar.is_user_write:
-                exp_state_vars_user_written.append(svar)
-            if svar.is_owner_read:
-                exp_state_vars_owner_read.append(svar)
-            if svar.is_owner_write:
-                exp_state_vars_owner_updated.append(svar)
-        
-        exp_state_vars_read = list(set(exp_state_vars_user_read + exp_state_vars_owner_read))
-        exp_state_vars_written = list(set(exp_state_vars_user_written + exp_state_vars_owner_updated))
-        exp_state_vars_user_only_read = list(set(exp_state_vars_user_read) - set(exp_state_vars_user_written))
-        exp_state_vars_user_only_read_owner_updated = list(set(exp_state_vars_user_only_read) & set(exp_state_vars_owner_updated))
-        exp_state_vars_user_written_owner_updated = list(set(exp_state_vars_user_written) & set(exp_state_vars_owner_updated))
-
-        self.exp_state_vars_read = exp_state_vars_read
-        self.exp_state_vars_owner_read =exp_state_vars_owner_read
-        self.exp_state_vars_user_read = exp_state_vars_user_read
-
-        self.exp_state_vars_written = exp_state_vars_written
-        self.exp_state_vars_user_written = exp_state_vars_user_written
-        self.exp_state_vars_owner_updated = exp_state_vars_owner_updated
-
-        self.exp_state_vars_user_only_read = exp_state_vars_user_only_read
-        self.exp_state_vars_user_only_read_owner_updated = exp_state_vars_user_only_read_owner_updated
-        self.exp_state_vars_user_written_owner_updated = exp_state_vars_user_written_owner_updated
-
-
-    def __search_one_state_var_in_return(self, f_sig, type_str, svar_lower_names, ):
-        """ 
-            查找 return 中的返回值
-        """
-        f = self.get_function_from_signature(f_sig)
-        candidates = []
-        if f is not None:
-            candidates = [svar for svar in f.return_var_group.state_vars if str(svar.type).startswith(type_str)]
-            if len(candidates) == 1:
-                return candidates[0]
-   
-        for svar in candidates + self.all_state_variables:
-            for name in svar_lower_names:
-                if name in svar.name.lower():
-                    return svar
-        return None
-
-    def _search_paused(self):
-        """
-            搜索所有的 paused
-            paused 符合以下特点，出现在 tranfer 的 require 中（没有 local variables 出现在 require 中），bool 类型，只有 owner 可以修改
-        """
-        paused_candidates = []
-        #print('------',len(self.exp_state_vars_user_only_read_owner_updated))
-        for sve in self.exp_state_vars_user_only_read_owner_updated:
-            if sve.state_variable.type == ElementaryType('bool'):
-                paused_candidates.append(sve)
-    
-        for sve in list(set(paused_candidates)):
-            funcs_sigs = [f.function.full_name for f in sve.read_in_require_functions]
-            if len(set(funcs_sigs) & set(self.token_write_function_sigs)) > 0: # 如果变量 require function 出现在 token 写函数中
-            #if len(sve.read_in_require_functions) > 0:
-                sve.stype = StateVarType.PAUSED
-
-    def _search_erc20(self):
-        """
-            一个代币使用 name 和 symbol 的方式来标识自己，搜索所有的 name 和 symbol
-            ERC20 是标准接口
-        """
-        name = self.__search_one_state_var_in_return('name()','string',['name'])
-        if name is not None:
-            self.svar_exp_svar_dict[name].stype = StateVarType.NAME 
-        
-        symbol = self.__search_one_state_var_in_return('symbol()','string',['symbol'])
-        if symbol is not None:
-            self.svar_exp_svar_dict[symbol].stype = StateVarType.SYMBOL 
-        
-        decimals = self.__search_one_state_var_in_return('decimals()','uint',['decimals'])
-        if decimals is not None: 
-            self.svar_exp_svar_dict[decimals].stype = StateVarType.DECIMALS
-
-        """
-            查找 totalSupply 变量
-        """
-        totalsupply = self.__search_one_state_var_in_return('totalSupply()','uint256',['totalsupply'])
-        if totalsupply is not None:
-            self.svar_exp_svar_dict[totalsupply].stype = StateVarType.TOTAL_SUPPLY
-
-        """
-            搜索 balance 变量
-        """
-        balances = self.__search_one_state_var_in_return('balanceOf(address)','mapping(address => uint256)',['balance'])
-        if balances is not None:
-            self.svar_exp_svar_dict[balances].stype = StateVarType.BALANCES
-
-        """
-            搜索 allowance 变量
-        """
-        allowances = self.__search_one_state_var_in_return('allowance(address,address)','mapping(address => mapping(address => uint256))',['allow'])
-        if allowances is not None:
-            self.svar_exp_svar_dict[allowances].stype = StateVarType.ALLOWANCES
-
-    
-    def _search_erc721(self):
-
-        name = self.__search_one_state_var_in_return('name()','string',['name'])
-        if name is not None:
-            self.svar_exp_svar_dict[name].stype = StateVarType.NAME 
-        
-        symbol = self.__search_one_state_var_in_return('symbol()','string',['symbol'])
-        if symbol is not None:
-            self.svar_exp_svar_dict[symbol].stype = StateVarType.SYMBOL 
-        
-        ownerOf = self.__search_one_state_var_in_return('ownerOf(uint256)','mapping(uint256 => address)',[],search_name=False)
-        if ownerOf is not None:
-            self.svar_exp_svar_dict[ownerOf].stype = StateVarType.OWNER_OF
-
-        balances = self.__search_one_state_var_in_return('balanceOf(address)','mapping(address => uint256)',['balance'])
-        if balances is not None:
-            self.svar_exp_svar_dict[balances].stype = StateVarType.BALANCES
-
-        tokenApprovals = self.__search_one_state_var_in_return('getApproved(uint256)','mapping(address => uint256)',['tokenapproval'])
-        if tokenApprovals is not None:
-            self.svar_exp_svar_dict[tokenApprovals].stype = StateVarType.TOKEN_APPROVALS
-
-        operatorApprovals = self.__search_one_state_var_in_return('isApprovedForAll(address, address)','mapping(address => mapping(address => bool))',['operatorapproval'])
-        if operatorApprovals is not None:
-            self.svar_exp_svar_dict[operatorApprovals].stype = StateVarType.OPERATOR_APPROVALS
-
-        uri = self.__search_one_state_var_in_return('uri(uint256)','string',['uri'])
-        if uri is not None:
-            self.svar_exp_svar_dict[uri].stype = StateVarType.URL
-        
-
-    def _search_erc1155(self):
-
-        balances = self.__search_one_state_var_in_return('balanceOf(address, uint256)','mapping(uint256 => mapping(address => uint256))',['balance'])
-        if balances is not None:
-            self.svar_exp_svar_dict[balances].stype = StateVarType.BALANCES
-
-        operatorApprovals = self.__search_one_state_var_in_return('isApprovedForAll(address, address)','mapping(address => mapping(address => bool))',['operatorapproval'])
-        if operatorApprovals is not None:
-            self.svar_exp_svar_dict[operatorApprovals].stype = StateVarType.OPERATOR_APPROVALS
-
-        uri = self.__search_one_state_var_in_return('uri(uint256)','string',['uri'])
-        if uri is not None:
-            self.svar_exp_svar_dict[uri].stype = StateVarType.URL
-
-
-    def _serach_unfair_settings(self):
-        """
-            对于剩余的变量，如果 owner 可以修改，则认为是 unfair settings
-        """
-        for evar in self.exp_state_vars_owner_updated:
-            if str(evar.stype != StateVarType.UNKNOWN): continue
-            evar.stype = StateVarType.UNFAIR_SETTING
-
-    def _serach_lack_event_functions(self):
-        """
-            TODO:需要再次确认， owner 的函数是否需要 event
-            如果一个 function 写了 state variable，则应当发送一个 event，提醒用户，这里寻找缺少的 event 的 function。
-            我们并不考虑 event 的参数，关于 event 和实际操作不一致的问题：TokenScope: Automatically Detecting Inconsistent Behaviors of Cryptocurrency Tokens in Ethereum
-        """
-        self.lack_event_functions: List["FunctionExp"] = []
-        self.lack_event_functions_owner: List["FunctionExp"] = [] # owner 写的 function 缺少 event
-        self.lack_event_functions_user: List["FunctionExp"] = [] # user 写的 function 缺少 event
+        for f in self.state_var_read_functions:
+            svars = f.function.all_state_variables_read()
+            svars_read += svars
+            if f.function.is_constructor: continue
+            if f in self.owner_in_require_functions: svars_owner_read += svars
+            else: svars_user_read += svars
+        svars_read = list(set(svars_read))
+        svars_user_read = list(set(svars_user_read))
+        svars_owner_read = list(set(svars_owner_read))
 
         for f in self.state_var_written_functions:
-            if not f.function.is_constructor and len(f.events) == 0:
-                if f in self.owner_in_require_functions:
-                    self.lack_event_functions_owner.append(f)
-                else:
-                    self.lack_event_functions_user.append(f)
-        self.lack_event_functions = self.lack_event_functions_owner + self.lack_event_functions_user
+            svars = f.function.all_state_variables_written()
+            svars_written += svars
+            if f.function.is_constructor: continue
+            if f in self.owner_in_require_functions: svars_owner_updated += svars
+            else: svars_user_written += svars
+        svars_written = list(set(svars_written))
+        svars_user_written = list(set(svars_user_written))
+        svars_owner_updated = list(set(svars_owner_updated))
 
+        svars_user_only_read = list(set(svars_user_read)-set(svars_user_written))
+        svars_user_only_read_owner_updated = list(set(svars_user_only_read) & set(svars_owner_updated))
+        svars_user_written_owner_updated = list(set(svars_user_written) & set(svars_owner_updated))
+
+        self.state_vars_read = svars_read
+        self.state_vars_owner_read =svars_owner_read
+        self.state_vars_user_read = svars_user_read
+
+        self.state_vars_written = svars_written
+        self.state_vars_user_written = svars_user_written
+        self.state_vars_owner_updated = svars_owner_updated
+
+
+        self.state_vars_user_only_read = svars_user_only_read
+        self.state_vars_user_only_read_owner_updated = svars_user_only_read_owner_updated
+        self.state_vars_user_written_owner_updated = svars_user_written_owner_updated
+
+    def get_svar_read_written_functions(self, state_var):
+        """
+            获得一个变量的分别被 user 和 owner 的读写情况
+        """
+        functions_user_read: List["FunctionExp"] = []
+        functions_user_written: List["FunctionExp"] = []
+        functions_owner_read: List["FunctionExp"] = []
+        functions_owner_written: List["FunctionExp"] = []
+
+        for rf in self.state_var_read_functions_dict[state_var]:
+            if rf.function.is_constructor: continue
+            if rf in self.owner_in_require_functions:
+                functions_owner_read.append(rf)
+            else:
+                functions_user_read.append(rf)
+
+        for wf in self.state_var_written_functions_dict[state_var]:
+            if wf.function.is_constructor: continue
+            if wf in self.owner_in_require_functions:
+                functions_owner_written.append(wf)
+            else:
+                functions_user_written.append(wf)
+        
+        return functions_user_read, functions_user_written, functions_owner_read, functions_owner_written
+
+    def _svar2label(self):
+        self.svar_label_dict = {}
+        for label, svars in self.label_svars_dict.items():
+            for svar in svars:
+                self.svar_label_dict[svar] = label
+        """
+        self.svar_labels_dict = {}
+        self.svar_label_dict = {}
+        for label, svars in self.label_svars_dict.items():
+            for svar in svars:
+                self.svar_label_dict[svar] = label
+                fs_u_r,fs_u_w,fs_o_r,fs_o_w = self.get_svar_read_written_functions(svar)
+                self.svar_labels_dict[svar] = {
+                    'label': label,
+                    'is_user_read': len(fs_u_r) > 0,
+                    'is_user_written': len(fs_u_w) > 0,
+                    'is_owner_read': len(fs_o_r) > 0,
+                    'is_owner_written': len(fs_o_w) > 0,
+                }
+        """
+
+    from naga.core.printers import contract_json_summary
     def summary(self):
-        paused = []
-        for evar in self.all_exp_state_vars:
-            if evar.stype == StateVarType.PAUSED:
-                paused.append(evar)
-        total = []
-        for evar in self.all_exp_state_vars:
-            if evar.stype == StateVarType.TOTAL_SUPPLY:
-                total.append(evar)
-        
-        for evar in self.all_exp_state_vars:
-            print(evar.summary())
-                
-        
-        return '\ncontract:{}\nstate vars:{}\nowner:{}\nbwList:{}\npaused:{}\ntotalSupply:{}\nlack event functions:{}\n'.format(self.contract.name,list2str(self.all_exp_state_vars),list2str(self.owners),list2str(self.bwList),list2str(paused),list2str(total),list2str(self.lack_event_functions))
-        """
-        return '\ncontract:{}\nstate vars:{}\nowner:{}\nbwList:{}\npaused:{}\ntotalSupply:{}\nbalances:{}\nallowed:{}\nidentifies:{}\n'\
-        'Owner can update: totalSupply:{}, balances:{}, allowed:{}, identifies:{}, unfair settings:{}\nlack event functions:{}\n'.format(self.contract.name,list2str(self.all_exp_state_vars),list2str(self.owners),list2str(self.bwList),list2str(self.paused), self.totalSupply, self.balances, self.allowed, list2str(self.identifies),list2str(self.unfair_settings),self.is_owner_updated_totalSupply,self.is_owner_updated_balances,self.is_owner_updated_allowed,list2str(self.owner_updated_identifies),list2str(self.lack_event_functions))
-        """
-       
-      
+        return self.contract_json_summary()
+
 
 def list2str(l):
     l = [str(i) for i in l]

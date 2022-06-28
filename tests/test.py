@@ -17,8 +17,9 @@ def test_compile(path):
 
     write_log("\n####" + time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime()) + "####\n")
     contracts = load_contractsJson(path)
-
     contracts_path = os.path.join(path,'contracts')
+    output_dir = 'results'
+    init_dir(output_dir)
     for version in tqdm(os.listdir(contracts_path)):
         if version == 'noSolc':
             continue
@@ -34,27 +35,22 @@ def test_compile(path):
             addr_path = os.path.join(version_path, addr)
 
             sol_path = find_contract_file(addr_path,contracts[addr]['ContractName'])
-
-            naga = Naga(Slither(sol_path),contracts[addr]['ContractName'])
-            if len(naga.main_contracts) != 1:
-                print('#',len(naga.main_contracts),sol_path)
-
-            #print(sol_path)
-            #write_log('\n'+sol_path)
-            
-                #write_log(c.summary())
-
-            '''
             try:
-                #slither = Slither(sol_path, solc_remaps=solc_remaps)
-                slither = Slither(sol_path)
-                for c in slither.contracts_derived:
-                    c = ContractExp(c)
-                    write_log(c.contratc.name+'\n')
-                    print(c.summary())
+                naga = Naga(Slither(sol_path),contracts[addr]['ContractName'],addr)
+                for c in naga.main_contracts:
+                    c.detect_erc20()
+                    write_file(output_dir,addr+'_'+c.contract.name,c.summary())
             except:
-                write_error('\"'+sol_path+'\",\n')
-            '''
+                print(addr)
+
+def init_dir(dir):
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+
+def write_file(dir,fileName,content):
+    with open(os.path.join(dir,fileName),"w") as fw:
+        fw.write(content)
+    fw.close()
 
 log_path = 'logs.txt'
 def write_log(content):
@@ -129,21 +125,22 @@ def test_compile2(path="/mnt/c/users/vk/naga/tokens/token20"):
         for sve in c.all_exp_state_vars:
             print(sve.summary())
 
-from naga.core.detectors import(LackEvents,Paused)
+
+
 def test_20():
     set_solc('0.6.10')
     slither = Slither('/mnt/c/users/vk/naga/tokens/token20/contracts/0.6.10/0x0b498ff89709d3838a063f1dfa463091f9801c2b/SetToken.sol')
-    naga = Naga(slither,'SetToken')
+    naga = Naga(slither,'SetToken','0x0b498ff89709d3838a063f1dfa463091f9801c2b')
     for c in naga.main_contracts:
-        print(c)
-        c.detect_erc20()
-        print(c.summary())
+        if c.is_erc20:
+            c.detect_erc20()
+            print(c.summary())
+    
         #c.register_detector(LackEvents)
         #c.register_detector(Paused)
 
 
-
 if __name__ == "__main__":
-    #test_compile('/mnt/c/users/vk/naga/tokens/token20')
+    test_compile('/mnt/c/users/vk/naga/tokens/token20')
     #test_compile2()
-    test_20()
+    #test_20()

@@ -40,29 +40,23 @@ class RequireExp(NodeExp):
         self.condition_read = condition_read # 每个 require 我们只关心一个 condition
         self.msg:str = msg # 第二个参数
         super().__init__(node,tainted_vars = [self.condition_read])
-        
-        self._owner_candidates = None
+        self.owner_candidates = self._get_owner_candidates()
 
-    @property
-    def owner_candidates(self):
+
+    def _get_owner_candidates(self):
         """
             如果 all_read_vars_group 中 local_vars 为空，state_vars 中有 address 或 mapping(address => bool)，且 solidity_vars 中存在一个 msg.sender，则我们认为它可能是 owner
         """
-
-        if self._owner_candidates is not None:
-            return self._owner_candidates
-
-        self._owner_candidates = []
-
         if len(self.all_read_vars_group.local_vars) > 0 or SolidityVariableComposed('msg.sender') not in self.all_read_vars_group.solidity_vars:
-            return self._owner_candidates
+            return []
 
+        owner_candidates = []
         for svar in self.all_read_vars_group.state_vars:
             if svar.type == ElementaryType('address'):
-                self._owner_candidates.append(svar)
+                owner_candidates.append(svar)
             elif isinstance(svar.type, MappingType) and svar.type.type_from == ElementaryType('address'): #and svar.type.type_to == ElementaryType('bool'):
-                self._owner_candidates.append(svar)
-        return self._owner_candidates
+                owner_candidates.append(svar)
+        return owner_candidates
 
     def __str__(self):
         return "RequireNode: {}\nMsg: {}\n{}".format(self.node,self.msg,self.all_read_vars_group)

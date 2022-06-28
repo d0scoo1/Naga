@@ -31,6 +31,7 @@ class FunctionExp():
         self._events:List["EventCall"] = None
         self._return_nodes:List["Node"] = None
         self._return_var_group:"VariableGroup" = None
+
         #self.owners:List["Variable"] = [] # 如果不为空，则说明只能由 owner 写入
         #self._state_vars_read_in_requires:List["StateVariable"] = None
         #self._local_vars_read_in_requires = None
@@ -86,7 +87,7 @@ class FunctionExp():
                 exp_node = NodeExp(node)
                 self._return_nodes.append(exp_node)
         return self._return_nodes
-    
+
     @property
     def return_var_group(self) -> VariableGroup:
         if self._return_var_group is not None: return self._return_var_group
