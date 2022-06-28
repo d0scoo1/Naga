@@ -31,11 +31,10 @@ class FunctionExp():
         self._events:List["EventCall"] = None
         self._return_nodes:List["Node"] = None
         self._return_var_group:"VariableGroup" = None
-
-        self.owners:List["Variable"] = [] # 如果不为空，则说明只能由 owner 写入
-        self._state_vars_read_in_requires:List["StateVariable"] = None
-        self._local_vars_read_in_requires = None
-        self._solidity_vars_read_in_requires:List["SolidityVariable"] = None
+        #self.owners:List["Variable"] = [] # 如果不为空，则说明只能由 owner 写入
+        #self._state_vars_read_in_requires:List["StateVariable"] = None
+        #self._local_vars_read_in_requires = None
+        #self._solidity_vars_read_in_requires:List["SolidityVariable"] = None
 
     @property
     def all_require_nodes(self) -> List["Node"]:
@@ -95,7 +94,7 @@ class FunctionExp():
         self._return_var_group = var_group_combine([exp_node.all_read_vars_group for exp_node in self.return_nodes])
         return self._return_var_group
             
-
+    """
     @property
     def state_vars_read_in_requires(self) :
         if self._state_vars_read_in_requires is not None:
@@ -125,17 +124,11 @@ class FunctionExp():
         for exp_req in self.requires:
             self._solidity_vars_read_in_requires += exp_req.all_read_vars_group.solidity_vars
         return self._solidity_vars_read_in_requires
-
+    """
     def __str__(self) -> str:
         return self.function.name
-    '''
-    def set_only_owner(self, only_owner: bool):
-        self._only_owner = only_owner
-    
-    @property
-    def is_only_owner(self):
-        return self._only_owner
-    '''
+   
+   
 
 
 

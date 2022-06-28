@@ -129,14 +129,21 @@ def test_compile2(path="/mnt/c/users/vk/naga/tokens/token20"):
         for sve in c.all_exp_state_vars:
             print(sve.summary())
 
+from naga.core.detectors import(LackEvents,Paused)
 def test_20():
-    set_solc('0.5.10')
-    slither = Slither("/mnt/c/users/vk/naga/tokens/token20/contracts/0.5.10/0x2ef52ed7de8c5ce03a4ef0efbe9b7450f2d7edc9/callbackSelector.sol")
-    naga = Naga(slither)
+    set_solc('0.6.10')
+    slither = Slither('/mnt/c/users/vk/naga/tokens/token20/contracts/0.6.10/0x0b498ff89709d3838a063f1dfa463091f9801c2b/SetToken.sol')
+    naga = Naga(slither,'SetToken')
+    for c in naga.main_contracts:
+        print(c)
+        c.detect_erc20()
+        print(c.summary())
+        #c.register_detector(LackEvents)
+        #c.register_detector(Paused)
 
 
 
 if __name__ == "__main__":
-    test_compile('/mnt/c/users/vk/naga/tokens/token20')
+    #test_compile('/mnt/c/users/vk/naga/tokens/token20')
     #test_compile2()
-    #test_20()
+    test_20()

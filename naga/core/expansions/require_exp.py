@@ -5,6 +5,7 @@ from slither.core.solidity_types.mapping_type import MappingType
 from slither.core.declarations import SolidityVariableComposed
 from slither.core.variables.variable import Variable
 from typing import List
+
 def get_requires(node:Node) -> List:
     '''
         一个 require 中可能有多个 && 条件，这等价于多个 require，所以依据 require 中的 && 条件分割成多个 require

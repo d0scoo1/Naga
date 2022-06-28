@@ -1,7 +1,6 @@
 
 
 from typing import List, Dict,Optional
-from pyrsistent import s
 from slither.core.declarations import Contract
 from slither.core.variables.state_variable import StateVariable
 
@@ -66,16 +65,46 @@ class ContractExp():
     ####   我们手动执行 detect 的方法   ####
     #######################################
 
-    def _detect_init(self):
+    def before_detect(self):
+        self.functions: List["FunctionExp"] = None # 所有的 entry functions
+        self.state_var_written_functions: List["FunctionExp"] = None
+        self.state_var_read_functions: List["FunctionExp"] = None
+        self.state_var_written_functions_dict:Dict("StateVariable",["FunctionExp"]) = None
+        self.state_var_read_functions_dict:Dict("StateVariable",["FunctionExp"]) = None
+        self.state_var_read_in_require_functions_dict: List["FunctionExp"] = None
+        self.state_var_read_in_requires_dict: Dict("StateVariable",["RequireExp"]) = None
+        self.all_state_variables: List["StateVariable"] = None
+
+        self.token_write_function_sigs = list(set(ERC20_WRITE_FUNCS_SIG+ERC721_WRITE_FUNCS_SIG+ERC1155_WRITE_FUNCS_SIG))
+        self.token_written_functions: List["FunctionExp"] = None # 接口中定义的用户的写函数，我们通过这些函数来判定一个 owner 是否为 bwList 或 paused
+
         self._dividing_functions()
+
+        # Owner & BW List
+        self.owners: List["StateVariable"] = []
+        self.bwList: List["StateVariable"] = []
+        self._owner_in_require_functions = None
         self._search_owners_bwList()
+
+        # State Variable
+        self.all_exp_state_vars: List["StateVariableExp"] = []
+        self.svar_exp_svar_dict: Dict("StateVariable","StateVariableExp") = dict()
+
+        self.exp_state_vars_read: List["StateVariableExp"] = []
+        self.exp_state_vars_owner_read: List["StateVariableExp"] = []
+        self.exp_state_vars_user_read: List["StateVariableExp"] = []
+
+        self.exp_state_vars_written: List["StateVariableExp"] = []
+        self.exp_state_vars_user_written: List["StateVariableExp"] = []
+        self.exp_state_vars_owner_updated: List["StateVariableExp"] = [] # 这里使用 updated 而不是 written 是因为，构造函数中，由 owner written 了一些变量， updated 表示不包括构造函数。
+
+        self.exp_state_vars_user_only_read: List["StateVariableExp"] = []
+        self.exp_state_vars_user_only_read_owner_updated: List["StateVariableExp"] = []
+        self.exp_state_vars_user_written_owner_updated: List["StateVariableExp"] = []
         self._divding_exp_state_vars()
-        self._search_paused()
-    
-    def detect_erc20(self):
-        self._detect_init()
-        self._search_erc20()
-        self._serach_unfair_settings()
+        self._search_exp_state_vars()
+
+        # Event
         self._serach_lack_event_functions()
 
 
@@ -83,18 +112,9 @@ class ContractExp():
         """
             初始化所有相关的 function
         """
-        self.functions: List["FunctionExp"] = [] # 所有的 entry functions
-        self.state_var_written_functions: List["FunctionExp"] = []
-        self.state_var_read_functions: List["FunctionExp"] = []
-        self.state_var_written_functions_dict:Dict("StateVariable",["FunctionExp"]) = dict()
-        self.state_var_read_functions_dict:Dict("StateVariable",["FunctionExp"]) = dict()
-        self.state_var_read_in_require_functions_dict: Dict("StateVariable",["FunctionExp"]) = dict()
-        self.state_var_read_in_requires_dict: Dict("StateVariable",["RequireExp"]) = dict()
-        self.all_state_variables: List["StateVariable"] = []
-
-        self.token_write_function_sigs = list(set(ERC20_WRITE_FUNCS_SIG+ERC721_WRITE_FUNCS_SIG+ERC1155_WRITE_FUNCS_SIG))
-        self.token_written_functions: List["FunctionExp"] = [] # 接口中定义的用户的写函数，我们通过这些函数来判定一个 owner 是否为 bwList 或 paused
-
+        self.functions = []
+        self.state_var_written_functions = []
+        self.state_var_read_functions = []
         for f in self.contract.functions_entry_points: # functions_declared():
             f = FunctionExp(f)
             self.functions.append(f)
@@ -104,11 +124,18 @@ class ContractExp():
                 self.state_var_written_functions.append(f)
         
         # 获取所有的 transfer functions
+        self.token_written_functions = []
         for fs in self.token_write_function_sigs :
             f = self.get_function_from_signature(fs)
             if f is not None:
                 self.token_written_functions.append(f)
         
+        # 获取所有的 state variables
+        self.state_var_written_functions_dict = dict()
+        self.state_var_read_functions_dict = dict()
+        self.state_var_read_in_require_functions_dict = dict()
+        self.state_var_read_in_requires_dict = dict()
+
         all_state_variables = []
         for f in self.functions:
             for svar in f.function.all_state_variables_written() + f.function.all_state_variables_read():
@@ -148,6 +175,9 @@ class ContractExp():
             None,
         )
 
+    def get_written_functions(self,state_var) -> List[FunctionExp]:
+        return [f for f in self.functions if state_var in f.function.all_state_variables_written()]
+
     def _search_owners_bwList(self):
         """
             搜索所有的 owners
@@ -157,10 +187,6 @@ class ContractExp():
                 3.1 为构造函数
             或 3.2 写函数被 require约束，且约束条件中仅包含 state var, msg.sender
         """
-                # Owner & BW List
-        self.owners: List["StateVariable"] = []
-        self.bwList: List["StateVariable"] = []
-        self._owner_in_require_functions = None
 
         # 检索所有的 function 查看是否有符合类型的 state variable
         owner_candidates = []
@@ -242,20 +268,6 @@ class ContractExp():
 
             用户可以写，owner 也可以写，用户不能写， owner 可以写
         """
-        self.all_exp_state_vars: List["StateVariableExp"] = []
-        self.svar_exp_svar_dict: Dict("StateVariable","StateVariableExp") = dict()
-
-        self.exp_state_vars_read: List["StateVariableExp"] = []
-        self.exp_state_vars_owner_read: List["StateVariableExp"] = []
-        self.exp_state_vars_user_read: List["StateVariableExp"] = []
-
-        self.exp_state_vars_written: List["StateVariableExp"] = []
-        self.exp_state_vars_user_written: List["StateVariableExp"] = []
-        self.exp_state_vars_owner_updated: List["StateVariableExp"] = [] # 这里使用 updated 而不是 written 是因为，构造函数中，由 owner written 了一些变量， updated 表示不包括构造函数。
-
-        self.exp_state_vars_user_only_read: List["StateVariableExp"] = []
-        self.exp_state_vars_user_only_read_owner_updated: List["StateVariableExp"] = []
-        self.exp_state_vars_user_written_owner_updated: List["StateVariableExp"] = []
 
         for svar in self.owners:
             self.all_exp_state_vars.append(StateVariableExp(svar,self,StateVarType.OWNER))
@@ -283,13 +295,13 @@ class ContractExp():
         exp_state_vars_user_written_owner_updated = []
 
         for svar in self.all_exp_state_vars:
-            if svar.is_user_read:
+            if svar.is_user_readable:
                 exp_state_vars_user_read.append(svar)
-            if svar.is_user_write:
+            if svar.is_user_writable:
                 exp_state_vars_user_written.append(svar)
-            if svar.is_owner_read:
+            if svar.is_owner_readable:
                 exp_state_vars_owner_read.append(svar)
-            if svar.is_owner_write:
+            if svar.is_owner_writable:
                 exp_state_vars_owner_updated.append(svar)
         
         exp_state_vars_read = list(set(exp_state_vars_user_read + exp_state_vars_owner_read))
@@ -311,7 +323,7 @@ class ContractExp():
         self.exp_state_vars_user_written_owner_updated = exp_state_vars_user_written_owner_updated
 
 
-    def __search_one_state_var_in_return(self, f_sig, type_str, svar_lower_names, ):
+    def __search_one_state_var_in_return(self, f_sig, type_str, svar_lower_names):
         """ 
             查找 return 中的返回值
         """
@@ -321,20 +333,20 @@ class ContractExp():
             candidates = [svar for svar in f.return_var_group.state_vars if str(svar.type).startswith(type_str)]
             if len(candidates) == 1:
                 return candidates[0]
-   
+
         for svar in candidates + self.all_state_variables:
+            #print('---',svar.name.lower(),'total' in svar.name.lower())
             for name in svar_lower_names:
                 if name in svar.name.lower():
                     return svar
         return None
 
-    def _search_paused(self):
+    def _search_exp_state_vars(self):
         """
             搜索所有的 paused
             paused 符合以下特点，出现在 tranfer 的 require 中（没有 local variables 出现在 require 中），bool 类型，只有 owner 可以修改
         """
         paused_candidates = []
-        #print('------',len(self.exp_state_vars_user_only_read_owner_updated))
         for sve in self.exp_state_vars_user_only_read_owner_updated:
             if sve.state_variable.type == ElementaryType('bool'):
                 paused_candidates.append(sve)
@@ -342,25 +354,7 @@ class ContractExp():
         for sve in list(set(paused_candidates)):
             funcs_sigs = [f.function.full_name for f in sve.read_in_require_functions]
             if len(set(funcs_sigs) & set(self.token_write_function_sigs)) > 0: # 如果变量 require function 出现在 token 写函数中
-            #if len(sve.read_in_require_functions) > 0:
                 sve.stype = StateVarType.PAUSED
-
-    def _search_erc20(self):
-        """
-            一个代币使用 name 和 symbol 的方式来标识自己，搜索所有的 name 和 symbol
-            ERC20 是标准接口
-        """
-        name = self.__search_one_state_var_in_return('name()','string',['name'])
-        if name is not None:
-            self.svar_exp_svar_dict[name].stype = StateVarType.NAME 
-        
-        symbol = self.__search_one_state_var_in_return('symbol()','string',['symbol'])
-        if symbol is not None:
-            self.svar_exp_svar_dict[symbol].stype = StateVarType.SYMBOL 
-        
-        decimals = self.__search_one_state_var_in_return('decimals()','uint',['decimals'])
-        if decimals is not None: 
-            self.svar_exp_svar_dict[decimals].stype = StateVarType.DECIMALS
 
         """
             查找 totalSupply 变量
@@ -368,75 +362,55 @@ class ContractExp():
         totalsupply = self.__search_one_state_var_in_return('totalSupply()','uint256',['totalsupply'])
         if totalsupply is not None:
             self.svar_exp_svar_dict[totalsupply].stype = StateVarType.TOTAL_SUPPLY
+          
 
         """
             搜索 balance 变量
         """
         balances = self.__search_one_state_var_in_return('balanceOf(address)','mapping(address => uint256)',['balance'])
+        if balances is None:
+            balances = self.__search_one_state_var_in_return('balanceOf(address,uint256)','mapping(uint256 => mapping(address => uint256))',['balance'])
         if balances is not None:
             self.svar_exp_svar_dict[balances].stype = StateVarType.BALANCES
 
         """
             搜索 allowance 变量
         """
-        allowances = self.__search_one_state_var_in_return('allowance(address,address)','mapping(address => mapping(address => uint256))',['allow'])
-        if allowances is not None:
-            self.svar_exp_svar_dict[allowances].stype = StateVarType.ALLOWANCES
+        allowance = self.__search_one_state_var_in_return('allowance(address,address)','mapping(address => mapping(address => uint256))',['allow'])
+        if allowance is not None:
+            self.svar_exp_svar_dict[allowance].stype = StateVarType.ALLOWED
 
-    
-    def _search_erc721(self):
-
+        """
+            一个代币使用 name 和 symbol 的方式来标识自己，搜索所有的 name 和 symbol
+            ERC20 是标准接口，ERC721 是可选，ERC1155 则不需要
+        """
+        identifies = []
         name = self.__search_one_state_var_in_return('name()','string',['name'])
-        if name is not None:
-            self.svar_exp_svar_dict[name].stype = StateVarType.NAME 
+        if name is not None: identifies.append(name)
         
         symbol = self.__search_one_state_var_in_return('symbol()','string',['symbol'])
-        if symbol is not None:
-            self.svar_exp_svar_dict[symbol].stype = StateVarType.SYMBOL 
+        if symbol is not None: identifies.append(symbol)
         
-        ownerOf = self.__search_one_state_var_in_return('ownerOf(uint256)','mapping(uint256 => address)',[],search_name=False)
-        if ownerOf is not None:
-            self.svar_exp_svar_dict[ownerOf].stype = StateVarType.OWNER_OF
+        decimals = self.__search_one_state_var_in_return('decimals()','uint',['decimals'])
+        if decimals is not None: identifies.append(decimals)
 
-        balances = self.__search_one_state_var_in_return('balanceOf(address)','mapping(address => uint256)',['balance'])
-        if balances is not None:
-            self.svar_exp_svar_dict[balances].stype = StateVarType.BALANCES
+        for svar in self.exp_state_vars_written:
+            if svar.state_variable.type == ElementaryType('string') and svar.state_variable.name.lower() in ['name','symbol']:
+                identifies.append(svar)
+            #elif str(svar.state_variable.type).startswith('uint'):
+            #    if svar.state_variable.name.lower() in ['decimals']:
+            #        identifies.append(svar)
 
-        tokenApprovals = self.__search_one_state_var_in_return('getApproved(uint256)','mapping(address => uint256)',['tokenapproval'])
-        if tokenApprovals is not None:
-            self.svar_exp_svar_dict[tokenApprovals].stype = StateVarType.TOKEN_APPROVALS
+        for svar in list(set(identifies)):
+            self.svar_exp_svar_dict[svar] = StateVarType.IDENTIFY
 
-        operatorApprovals = self.__search_one_state_var_in_return('isApprovedForAll(address, address)','mapping(address => mapping(address => bool))',['operatorapproval'])
-        if operatorApprovals is not None:
-            self.svar_exp_svar_dict[operatorApprovals].stype = StateVarType.OPERATOR_APPROVALS
-
-        uri = self.__search_one_state_var_in_return('uri(uint256)','string',['uri'])
-        if uri is not None:
-            self.svar_exp_svar_dict[uri].stype = StateVarType.URL
-        
-
-    def _search_erc1155(self):
-
-        balances = self.__search_one_state_var_in_return('balanceOf(address, uint256)','mapping(uint256 => mapping(address => uint256))',['balance'])
-        if balances is not None:
-            self.svar_exp_svar_dict[balances].stype = StateVarType.BALANCES
-
-        operatorApprovals = self.__search_one_state_var_in_return('isApprovedForAll(address, address)','mapping(address => mapping(address => bool))',['operatorapproval'])
-        if operatorApprovals is not None:
-            self.svar_exp_svar_dict[operatorApprovals].stype = StateVarType.OPERATOR_APPROVALS
-
-        uri = self.__search_one_state_var_in_return('uri(uint256)','string',['uri'])
-        if uri is not None:
-            self.svar_exp_svar_dict[uri].stype = StateVarType.URL
-
-
-    def _serach_unfair_settings(self):
         """
-            对于剩余的变量，如果 owner 可以修改，则认为是 unfair settings
+            unfair_settings: 如果一个变量是 uint 类型，我们认为是 unfair_settings
         """
         for evar in self.exp_state_vars_owner_updated:
             if str(evar.stype != StateVarType.UNKNOWN): continue
-            evar.stype = StateVarType.UNFAIR_SETTING
+            if str(evar.state_variable.type).startswith('uint'):
+                evar.stype = StateVarType.UNFAIR_SETTING
 
     def _serach_lack_event_functions(self):
         """
@@ -455,6 +429,9 @@ class ContractExp():
                 else:
                     self.lack_event_functions_user.append(f)
         self.lack_event_functions = self.lack_event_functions_owner + self.lack_event_functions_user
+    
+    def erc20_analyzer(self):
+        result = dict()
 
     def summary(self):
         paused = []

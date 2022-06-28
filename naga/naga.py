@@ -25,15 +25,6 @@ class Naga():
         return contracts
 
     def _get_erc_contracts(self):
-        """
-        contracts_derived = [c for c in self.slither.contracts_derived]
-        contracts_called = [] # (contract,library)
-        for c in contracts_derived:
-            calls = [] # 获取所有的 library calls and  external high level calls
-            for f in c.all_library_calls + c.all_high_level_calls:
-                calls.append(f[0])
-            contracts_called += calls
-        """
         
         """
             获取 ERC20,ERC721,ERC1155 的合约
