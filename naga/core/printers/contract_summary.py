@@ -201,16 +201,16 @@ def contract_summary(self):
 
 
 # address, contract_name, is_upgradeable_proxy, is_upgradeable, erc, exist_ownership, exist_paused, owner_written_identities_num, svar_user_read_owner_update, svar_user_write_owner_update,lack_event_functions_num, lack_event_user_function_num, lack_event_owner_function_num,
-def contract_csv_summary(self):
+def contract_summary2csv(self,summray):
     line = {
-        'address':  self.contract_address,
-        'contract_name': self.contract.name,
-        'is_upgradeable_proxy': self.is_upgradeable_proxy,
-        'is_upgradeable': self.is_upgradeable,
-        'erc': self.get_erc_str,
-        'owners_num': len(self.label_svars_dict['owners']),
-        'bwList': len(self.label_svars_dict['bwList']),
-        'paused': len(self.label_svars_dict['paused']),
+        'address':  summray.contract_address,
+        'contract_name': summray.contract.name,
+        'is_upgradeable_proxy': summray.is_upgradeable_proxy,
+        'is_upgradeable': summray.is_upgradeable,
+        'erc': summray.get_erc_str,
+        'owners_num': len(summray.label_svars_dict['owners']),
+        'bwList': len(summray.label_svars_dict['bwList']),
+        'paused': len(summray.label_svars_dict['paused']),
 
         'other_svars_user_read_owner_updated':0,
         'other_svars_user_written_owner_updated':0,
@@ -233,3 +233,4 @@ def contract_csv_summary(self):
         'lack_event_total_svars_owner_updated':0,
 
     }
+    print(line)

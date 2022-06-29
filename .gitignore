@@ -2,3 +2,4 @@ tests
 tools
 logs.txt
 errors.txt
+**/__pycache__
