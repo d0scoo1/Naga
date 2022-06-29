@@ -3,3 +3,7 @@ tools
 logs.txt
 errors.txt
 **/__pycache__
+contract.json
+contratct.csv
+naga_data.lnk
+results

@@ -1,5 +1,3 @@
-
-
 from typing import List, Dict,Optional
 from slither.core.declarations import Contract
 from slither.core.variables.state_variable import StateVariable
@@ -7,6 +5,8 @@ from slither.core.variables.state_variable import StateVariable
 from .function_exp import FunctionExp
 from .require_exp import RequireExp
 from naga.core.erc import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_WRITE_FUNCS_SIG)
+
+import json
 
 
 class ContractExp():
@@ -91,6 +91,8 @@ class ContractExp():
         self.detect_lack_event_functions()
         self._svar2label()
         self._svar_rw_dict = None
+        self._summary = None
+        self._summary_csv = None
 
 
     def detect_erc20(self):
@@ -318,9 +320,18 @@ class ContractExp():
                 }
         """
 
-    from naga.core.printers import contract_summary
+    from naga.core.printers import contract_summary, contract_summary2csv
+    @property
     def summary(self):
-        return self.contract_summary()
+        if self._summary is None:
+            self._summary = self.contract_summary()
+        return self._summary
+    
+    def summary_json(self):
+        return json.dumps(self.summary,indent=4)
+    
+    def summary_csv(self):
+        return self.contract_summary2csv()
 
 
 def list2str(l):

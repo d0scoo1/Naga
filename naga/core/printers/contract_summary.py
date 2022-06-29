@@ -10,24 +10,16 @@
             'name':'' ,
             'type': '',
             'label': 'none',
-            'is_user_read': 'none',
-            'is_user_written': 'none',
-            'is_owner_read': 'none',
-            'is_owner_written': 'none',
+            'rw':0000,
+
         }
     ],
     'functions':[
         {
             'name':'',
-            'only_read':False,
+            'state_variables_read':[],
+            'state_variables_written':[],
             'owner_in_require':False,
-        }
-    ],
-    'lack_event_functions':[
-        {
-            'name':'',
-            'owner_in_require':False,
-            'state_variables_written':[]
         }
     ],
     erc_svars:{
@@ -56,7 +48,14 @@
         'tokenApprovals':0000,
         'operatorApprovals':0000,
         'uri':0000,
-    }
+    },
+    'lack_event_functions':[
+        {
+            'name':'',
+            'owner_in_require':False,
+            'state_variables_written':[]
+        }
+    ],
 }
 """
 
@@ -67,8 +66,9 @@ def get_common_labels():
 def get_svar_labels():
     svar_labels = []
     for s in ERC20_STATE_VARIAVLES + ERC721_STATE_VARIAVLES + ERC1155_STATE_VARIAVLES:
-        svar_labels.append(s[0])
-    return list(set(svar_labels))
+        if s not in svar_labels:
+            svar_labels.append(s[0])
+    return svar_labels
 
 import json
 
@@ -80,8 +80,6 @@ def contract_summary(self):
         'is_upgradeable': self.is_upgradeable,
         'erc': self.get_erc_str,
         'state_variables': [],
-        'functions': [],
-        'lack_event_functions': [],
         'erc_svars':{},
         'erc_svars_rw':{},
         'svar_user_owner_rw':{ # 我们只关心用户读写和owner 写， 也就是末位为 1 的
@@ -102,9 +100,11 @@ def contract_summary(self):
             '1110':0,
             '1111':0, #
         },
+        'functions': [],
+        'lack_event_functions': [],
         'lack_event_user_erc_svars':{},
         'lack_event_owner_erc_svars':{},
-        'lack_event_user_owner_rw':{
+        'l_e_f_rw':{
             '0000':0,'0001':0, '0010':0,'0011':0, '0100':0,'0101':0, '0110':0,'0111':0, 
             '1000':0,'1001':0, '1010':0,'1011':0, '1100':0,'1101':0, '1110':0,'1111':0, 
         }
@@ -116,21 +116,18 @@ def contract_summary(self):
             'name': svar.name,
             'type': str(svar.type),
             'label': 'none',
-            'is_user_read': 'none',
-            'is_user_written': 'none',
-            'is_owner_read': 'none',
-            'is_owner_written': 'none',
-            'rw':'0000'
+            'rw':self.svar_rw_dict[svar]
         }
+        
         if svar in self.svar_label_dict:
             svar_summary['label'] = self.svar_label_dict[svar]
+        '''
         fs_u_r,fs_u_w,fs_o_r,fs_o_w = self.get_svar_read_written_functions(svar)
         svar_summary['is_user_read'] = len(fs_u_r) > 0
         svar_summary['is_user_written'] = len(fs_u_w) > 0
         svar_summary['is_owner_read'] = len(fs_o_r) > 0
         svar_summary['is_owner_written'] = len(fs_o_w) > 0
-        svar_summary['rw'] = self.svar_rw_dict[svar]
-
+        '''
         summary['state_variables'].append(svar_summary)
 
     for f in self.functions:
@@ -141,6 +138,7 @@ def contract_summary(self):
             'owner_in_require': f in self.owner_in_require_functions,
         }
         summary['functions'].append(f_summary)
+
     for f in self.lack_event_functions:
         f_summary = {
             'name': f.function.name,
@@ -151,7 +149,7 @@ def contract_summary(self):
             f_summary['state_variables_written'].append(svar.name)
         summary['lack_event_functions'].append(f_summary)
     
-    svar_label_summary = {}
+    svar_label_summary = dict()
     for svar_label in get_common_labels() + get_svar_labels():
         if svar_label in self.label_svars_dict:
             svar_label_summary[svar_label] =[ svar.name for svar in self.label_svars_dict[svar_label]]
@@ -159,7 +157,7 @@ def contract_summary(self):
             svar_label_summary[svar_label] = []
         summary['erc_svars'] = svar_label_summary
 
-    svar_rw_summary = {}
+    svar_rw_summary = dict()
     for svar_label in get_svar_labels():
         if svar_label in self.label_svars_dict:
             svars = self.label_svars_dict[svar_label]
@@ -172,65 +170,164 @@ def contract_summary(self):
     for svar in summary['state_variables']: # 统计每种读写情况出现的次数
         summary['svar_user_owner_rw'][svar['rw']] += 1
 
-    lack_event_user_erc_svars = {} # 查找用户是写了什么变量
-    lack_event_owner_erc_svars = {} # 检查 owner 写了什么变量没有提示
+    lack_event_user_erc_svars = dict() # 查找用户是写了什么变量
+    lack_event_owner_erc_svars = dict() # 检查 owner 写了什么变量没有提示
     for svar_label in get_common_labels() + get_svar_labels():
         lack_event_user_erc_svars[svar_label] = 0
         lack_event_owner_erc_svars[svar_label] = 0
-    lack_event_user_erc_svars['none'] = 0
-    lack_event_owner_erc_svars['none'] = 0
+    lack_event_user_erc_svars['no_label'] = 0
+    lack_event_owner_erc_svars['no_label'] = 0
     for f in self.lack_event_user_functions:
         for svar in f.function.all_state_variables_written():
             if svar in self.svar_label_dict: 
                 lack_event_user_erc_svars[self.svar_label_dict[svar]] += 1
-            else: lack_event_user_erc_svars['none'] += 1
+            else: lack_event_user_erc_svars['no_label'] += 1
     for f in self.lack_event_owner_functions:
         for svar in f.function.all_state_variables_written():
             if svar in self.svar_label_dict:
                 lack_event_owner_erc_svars[self.svar_label_dict[svar]] += 1
             else:
-                lack_event_owner_erc_svars['none'] += 1
+                lack_event_owner_erc_svars['no_label'] += 1
     summary['lack_event_user_erc_svars'] = lack_event_user_erc_svars
     summary['lack_event_owner_erc_svars'] = lack_event_owner_erc_svars
     
     for f in self.lack_event_functions:
         for svar in f.function.all_state_variables_written():
-            summary['lack_event_user_owner_rw'][self.svar_rw_dict[svar]] += 1
+            summary['l_e_f_rw'][self.svar_rw_dict[svar]] += 1
 
     return summary
 
 
 # address, contract_name, is_upgradeable_proxy, is_upgradeable, erc, exist_ownership, exist_paused, owner_written_identities_num, svar_user_read_owner_update, svar_user_write_owner_update,lack_event_functions_num, lack_event_user_function_num, lack_event_owner_function_num,
-def contract_summary2csv(self,summray):
+def contract_summary2csv(self):
     line = {
-        'address':  summray.contract_address,
-        'contract_name': summray.contract.name,
-        'is_upgradeable_proxy': summray.is_upgradeable_proxy,
-        'is_upgradeable': summray.is_upgradeable,
-        'erc': summray.get_erc_str,
-        'owners_num': len(summray.label_svars_dict['owners']),
-        'bwList': len(summray.label_svars_dict['bwList']),
-        'paused': len(summray.label_svars_dict['paused']),
+        'address':  self.summary['address'],
+        'contract_name': self.summary['contract_name'],
+        'is_upgradeable_proxy': self.summary['is_upgradeable_proxy'],
+        'is_upgradeable': self.summary['is_upgradeable'],
+        'erc': self.summary['erc'],
+        #### num ########
+        'owners': len(self.summary['erc_svars']['owners']),
+        'bwList': len(self.summary['erc_svars']['bwList']),
+        'paused': len(self.summary['erc_svars']['paused']),
+        ### user_owner read written ####
+        'name': self.summary['erc_svars_rw']['name'],
+        'symbol': self.summary['erc_svars_rw']['symbol'],
+        'decimals': self.summary['erc_svars_rw']['decimals'],
+        'totalSupply': self.summary['erc_svars_rw']['totalSupply'],
+        'balances': self.summary['erc_svars_rw']['balances'],
+        'allowances': self.summary['erc_svars_rw']['allowances'],
+        'ownerOf': self.summary['erc_svars_rw']['ownerOf'],
+        'tokenApprovals':self.summary['erc_svars_rw']['tokenApprovals'],
+        'operatorApprovals': self.summary['erc_svars_rw']['operatorApprovals'],
+        'uri': self.summary['erc_svars_rw']['uri'],
+        ############################
+        'svars_num': len(self.summary['state_variables']),
+        'svars_xxx1_num': 0, # owner 写
+        'svars_10x1_num': 0, # 用户只读的， owner 写
+        'svars_x1x1_num': 0, # 用户读写的 owner 写
 
-        'other_svars_user_read_owner_updated':0,
-        'other_svars_user_written_owner_updated':0,
-        'total_svars_user_read_owner_updated':0,
-        'total_svars_user_written_owner_updated':0,
+        'functions_num': len(self.summary['functions']),
+        'read_functions_num': 0,
+        'write_functions_num': 0,
+        'owner_in_require_functions_num': 0, # 
 
-        'state_vars_user_only_read_owner_updated': len(self.state_vars_user_only_read_owner_updated),
-        'state_vars_user_written_owner_updated': len(self.state_vars_user_written_owner_updated),
-        'lack_event_functions_num': len(self.lack_event_functions),
-        'lack_event_user_functions_num': len(self.lack_event_user_functions),
-        'lack_event_owner_functions_num': len(self.lack_event_owner_functions),
-        'lack_event_owner_update_owner':0, # TODO:
-        'lack_event_owner_update_paused':0,
-        'lack_event_owner_update_bwList':0,
-        'lack_event_owner_update_name':0,
-        'lack_event_owner_update_totalsupply':0,
-        'lack_event_owner_update_balance':0,
-        'lack_event_owner_update_allowance':0,
-        'lack_event_other_svars_owner_updated':0,
-        'lack_event_total_svars_owner_updated':0,
+        'lack_event_functions_num': len(self.summary['lack_event_functions']),
+        'lack_event_user_functions_num': 0, #
+        'lack_event_owner_functions_num':  0, #
+
+        'l_e_f_user_update_owners': self.summary['lack_event_user_erc_svars']['owners'],
+        'l_e_f_user_update_bwList': self.summary['lack_event_user_erc_svars']['bwList'],
+        'l_e_f_user_update_paused': self.summary['lack_event_user_erc_svars']['paused'],
+        'l_e_f_user_update_name': self.summary['lack_event_user_erc_svars']['name'],
+        'l_e_f_user_update_symbol': self.summary['lack_event_user_erc_svars']['symbol'],
+        'l_e_f_user_update_decimals': self.summary['lack_event_user_erc_svars']['decimals'],
+        'l_e_f_user_update_totalSupply': self.summary['lack_event_user_erc_svars']['totalSupply'],
+        'l_e_f_user_update_balances': self.summary['lack_event_user_erc_svars']['balances'],
+        'l_e_f_user_update_allowances': self.summary['lack_event_user_erc_svars']['allowances'],
+        'l_e_f_user_update_ownerOf': self.summary['lack_event_user_erc_svars']['ownerOf'],
+        'l_e_f_user_update_tokenApprovals':self.summary['lack_event_user_erc_svars']['tokenApprovals'],
+        'l_e_f_user_update_operatorApprovals': self.summary['lack_event_user_erc_svars']['operatorApprovals'],
+        'l_e_f_user_update_uri': self.summary['lack_event_user_erc_svars']['uri'],
+        'l_e_f_user_update_no_label': self.summary['lack_event_user_erc_svars']['no_label'],
+
+        'l_e_f_owner_update_owners': self.summary['lack_event_owner_erc_svars']['owners'],
+        'l_e_f_owner_update_bwList':self.summary['lack_event_owner_erc_svars']['bwList'],
+        'l_e_f_owner_update_paused': self.summary['lack_event_owner_erc_svars']['paused'],
+        'l_e_f_owner_update_name': self.summary['lack_event_owner_erc_svars']['name'],
+        'l_e_f_owner_update_symbol': self.summary['lack_event_owner_erc_svars']['symbol'],
+        'l_e_f_owner_update_decimals': self.summary['lack_event_owner_erc_svars']['decimals'],
+        'l_e_f_owner_update_totalSupply': self.summary['lack_event_owner_erc_svars']['totalSupply'],
+        'l_e_f_owner_update_balances': self.summary['lack_event_owner_erc_svars']['balances'],
+        'l_e_f_owner_update_allowances': self.summary['lack_event_owner_erc_svars']['allowances'],
+        'l_e_f_owner_update_ownerOf': self.summary['lack_event_owner_erc_svars']['ownerOf'],
+        'l_e_f_owner_update_tokenApprovals':self.summary['lack_event_owner_erc_svars']['tokenApprovals'],
+        'l_e_f_owner_update_operatorApprovals': self.summary['lack_event_owner_erc_svars']['operatorApprovals'],
+        'l_e_f_owner_update_uri': self.summary['lack_event_owner_erc_svars']['uri'],
+        'l_e_f_owner_update_no_label': self.summary['lack_event_owner_erc_svars']['no_label'],
+
+        'l_e_f_rw_xxx1_num': 0,
+        'l_e_f_rw_10x1_num': 0,
+        'l_e_f_rw_x1x1_num': 0,
 
     }
-    print(line)
+
+    svars_xxx1_num = 0
+    svars_10x1_num = 0
+    svars_x1x1_num = 0
+    for svar in self.summary['state_variables']:
+        if svar['rw'][3] == '1':
+            svars_xxx1_num += 1
+            if svar['rw'][0] == '1' and svar['rw'][1] == '0':
+                svars_10x1_num += 1
+            if svar['rw'][1] == '1':
+                svars_x1x1_num += 1
+    line['svars_xxx1_num'] = svars_xxx1_num
+    line['svars_10x1_num'] = svars_10x1_num
+    line['svars_x1x1_num'] = svars_x1x1_num
+
+    read_functions_num = 0
+    write_functions_num = 0
+    owner_in_require_functions_num = 0
+    for f in self.summary['functions']:
+        if len(f['state_variables_read']) > 0 and len(f['state_variables_written']) == 0:
+            read_functions_num += 1
+        if len(f['state_variables_written']) > 0:
+            write_functions_num += 1
+        if f['owner_in_require']:
+            owner_in_require_functions_num += 1
+    line['read_functions_num'] = read_functions_num
+    line['write_functions_num'] = write_functions_num
+    line['owner_in_require_functions_num'] = owner_in_require_functions_num
+
+    lack_event_user_functions_num = 0
+    lack_event_owner_functions_num = 0
+    for f in self.summary['lack_event_functions']:
+        if f['owner_in_require']:
+            lack_event_owner_functions_num += 1
+        else:
+            lack_event_user_functions_num += 1
+    line['lack_event_user_functions_num'] = lack_event_user_functions_num
+    line['lack_event_owner_functions_num'] = lack_event_owner_functions_num
+
+    l_e_f_rw_xxx1_num = 0
+    l_e_f_rw_10x1_num = 0
+    l_e_f_rw_x1x1_num = 0
+    for k,v in self.summary['l_e_f_rw'].items():
+        if k[3] == '1':
+            l_e_f_rw_xxx1_num += v
+            if k[0] == '1' and k[1] == '0':
+                l_e_f_rw_10x1_num += v
+            if k[1] == '1':
+                l_e_f_rw_x1x1_num += v
+    line['l_e_f_rw_xxx1_num'] = l_e_f_rw_xxx1_num
+    line['l_e_f_rw_10x1_num'] = l_e_f_rw_10x1_num
+    line['l_e_f_rw_x1x1_num'] = l_e_f_rw_x1x1_num
+
+    titles = []
+    values = []
+    for k,v in line.items():
+        titles.append(k)
+        values.append(str(v))
+
+    return line, ','.join(titles), ','.join(values)

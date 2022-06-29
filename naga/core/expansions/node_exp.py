@@ -4,6 +4,7 @@ from .variable_group import (VariableGroup,var_group_combine)
 from slither.slithir.operations import (
     HighLevelCall,Index,InternalCall,EventCall,Length,LibraryCall,LowLevelCall,Member,OperationWithLValue,Phi,PhiCallback,SolidityCall,Return,Operation,Condition,Transfer)
 
+NO_LEFT_VALUE_OPERATIONS = (Condition,Return,EventCall,Transfer)
 class NodeExp():
     def __init__(self, node:Node, tainted_vars = None):
         self.node = node
@@ -52,7 +53,7 @@ def irs_ssa_track(irs, tainted_vars=None):
 
     while irs:
         ir = irs.pop()
-        if isinstance(ir,(Condition,Return,EventCall,HighLevelCall,LibraryCall,LowLevelCall,SolidityCall,PhiCallback,Transfer)):
+        if isinstance(ir,NO_LEFT_VALUE_OPERATIONS): #,PhiCallback,SolidityCall,LibraryCall,LowLevelCall,HighLevelCall
             continue
         try:
             lval = ir.lvalue
@@ -81,16 +82,47 @@ def irs_ssa_track(irs, tainted_vars=None):
                 tvs += rval # 替换
     return tainted_vars
 
-'''
-def internalCall_track(ir):
-    irs = [ir for n in ir.function.nodes for ir in n.irs_ssa] # all_nodes()
-    if len(irs) == 0: return [] 
-    last_ir = irs[-1]
-    if not isinstance(last_ir, Return): return [] # 如果最后一个 ir 不是 return，则直接返回
-    return sum(irs_ssa_track(irs),[]) # 直接调用 irs track
-'''
 
+def internalCall_track(t_ir):
+
+    irs = [ir for n in t_ir.function.nodes for ir in n.irs_ssa] # all_nodes()
+    if len(irs) == 0: return [] # 由于后面使用了 sum([[]],[]),所以这里必须返回二维数组
+    rvals = []
+    index = 0
+    for ir in irs:
+        index += 1
+        if isinstance(ir, Return):
+           rvals += sum(irs_ssa_track(irs[0:index]),[])
+    if rvals != []:
+        return rvals
+    
+    '''
+        对于/mnt/c/users/vk/naga/tokens/token20/contracts/0.8.7/0x33db8d52d65f75e4cdda1b02463760c9561a2aa1/OUSD.sol 的扩展
+
+        function _governor() internal view returns (address governorOut) {
+        bytes32 position = governorPosition;
+        assembly {
+            governorOut := sload(position)
+        }
+    }
+    '''
+    if len(t_ir.function.returns) > 0: # TMP_67(uint256) = SOLIDITY_CALL sload(uint256)(position_1)
+        for ret_val in t_ir.function.returns:
+            if ret_val.name == '':
+                continue
+            index = 0
+            for ir in irs:
+                index += 1
+                if isinstance(ir,NO_LEFT_VALUE_OPERATIONS):
+                    continue
+                if ir.lvalue is not None and ir.lvalue.non_ssa_version == ret_val:
+                    rvals += sum(irs_ssa_track(irs[0:index]),[])
+
+    return rvals
+
+"""
 def internalCall_track(ir):
+    
     irs = [ir for n in ir.function.nodes for ir in n.irs_ssa] # all_nodes()
     if len(irs) == 0: return [] # 由于后面使用了 sum([[]],[]),所以这里必须返回二维数组
     rval = []
@@ -101,3 +133,4 @@ def internalCall_track(ir):
         if isinstance(ir, Return):
            rval += sum(irs_ssa_track(irs[0:index]),[])
     return rval
+"""

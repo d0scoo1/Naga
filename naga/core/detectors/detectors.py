@@ -80,6 +80,8 @@ def detect_owners_bwList(self):
             # 否则，增加到 owner_candidates
             owner_candidates.append(svar)
 
+
+
     # 检查每个 owner_candidate 依赖的 owner 是否也属于 owner_candidate
     # 首先找出自我依赖的，然后检查剩余的是否依赖于自我依赖
     owners = []
