@@ -90,6 +90,8 @@ class ContractExp():
         #self.detect_unfair_settings()
         self.detect_lack_event_functions()
         self._svar2label()
+        self._svar_rw_dict = None
+
 
     def detect_erc20(self):
         self._before_detect_erc_svars()
@@ -274,6 +276,27 @@ class ContractExp():
         
         return functions_user_read, functions_user_written, functions_owner_read, functions_owner_written
 
+    def get_rw_str(self,svar):
+        fs_u_r,fs_u_w,fs_o_r,fs_o_w = self.get_svar_read_written_functions(svar)
+        rw_str = ""
+        if len(fs_u_r) > 0: rw_str += '1'
+        else: rw_str += '0'
+        if len(fs_u_w) > 0: rw_str += '1'
+        else: rw_str += '0'
+        if len(fs_o_r) > 0: rw_str += '1'
+        else: rw_str += '0'
+        if len(fs_o_w) > 0: rw_str += '1'
+        else: rw_str += '0'
+        return rw_str
+    
+    @property
+    def svar_rw_dict(self):
+        if self._svar_rw_dict is None:
+            self._svar_rw_dict = {}
+            for svar in self.all_state_vars:
+                self._svar_rw_dict[svar] = self.get_rw_str(svar)
+        return self._svar_rw_dict
+
     def _svar2label(self):
         self.svar_label_dict = {}
         for label, svars in self.label_svars_dict.items():
@@ -295,9 +318,9 @@ class ContractExp():
                 }
         """
 
-    from naga.core.printers import contract_json_summary
+    from naga.core.printers import contract_summary
     def summary(self):
-        return self.contract_json_summary()
+        return self.contract_summary()
 
 
 def list2str(l):

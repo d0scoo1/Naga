@@ -8,26 +8,51 @@ from slither.core.solidity_types.mapping_type import MappingType
 
 from enum import Enum
 class StateVarLabel(Enum):
-    UNKNOWN = 0
-    OWNER = 1
-    BWLIST = 2
-    PAUSED = 3
-    TOTAL_SUPPLY = 4
-    BALANCES = 5
-    ALLOWANCES = 6 
-    NAME = 7
-    SYMBOL = 8
-    DECIMALS = 9
-    OWNER_OF = 10
-    TOKEN_APPROVALS = 11
-    OPERATOR_APPROVALS = 12
-    URL = 13
-    UNFAIR_SETTING = 14
+    UNKNOWN = 0x0
+    OWNERS = 0x10001
+    BWLIST = 0x10002
+    PAUSED = 0x10003
+    NAME = 0x20001
+    SYMBOL = 0x20002
+    DECIMALS = 0x20003
+    TOTAL_SUPPLY = 0x20004
+    BALANCES = 0x20005
+    ALLOWANCES = 0x20006
+    OWNER_OF = 0x30001
+    TOKEN_APPROVALS = 0x30001
+    OPERATOR_APPROVALS = 0x30002
+    URI = 0x30003
+
 
     def __str__(self):
         if self == StateVarLabel.UNKNOWN:
             return "UNKNOWN"
-        
+        elif self == StateVarLabel.OWNERS:
+            return "OWNERS"
+        elif self == StateVarLabel.BWLIST:
+            return "BWLIST"
+        elif self == StateVarLabel.PAUSED:
+            return "PAUSED"
+        elif self == StateVarLabel.NAME:
+            return "NAME"
+        elif self == StateVarLabel.SYMBOL:
+            return "SYMBOL"
+        elif self == StateVarLabel.DECIMALS:
+            return "DECIMALS"
+        elif self == StateVarLabel.TOTAL_SUPPLY:
+            return "TOTAL_SUPPLY"
+        elif self == StateVarLabel.BALANCES:
+            return "BALANCES"
+        elif self == StateVarLabel.ALLOWANCES:
+            return "ALLOWANCES"
+        elif self == StateVarLabel.OWNER_OF:
+            return "OWNER_OF"
+        elif self == StateVarLabel.TOKEN_APPROVALS:
+            return "TOKEN_APPROVALS"
+        elif self == StateVarLabel.OPERATOR_APPROVALS:
+            return "OPERATOR_APPROVALS"
+        elif self == StateVarLabel.URI:
+            return "URI"
 
         return "None"
 

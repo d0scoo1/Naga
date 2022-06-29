@@ -39,7 +39,7 @@ def test_compile(path):
                 naga = Naga(Slither(sol_path),contracts[addr]['ContractName'],addr)
                 for c in naga.main_contracts:
                     c.detect_erc20()
-                    write_file(output_dir,addr+'_'+c.contract.name,c.summary())
+                    write_file(output_dir,addr+'_'+c.contract.name,json.dumps(c.summary(),indent=4))
             except:
                 print(addr)
 
@@ -129,18 +129,21 @@ def test_compile2(path="/mnt/c/users/vk/naga/tokens/token20"):
 
 def test_20():
     set_solc('0.6.10')
-    slither = Slither('/mnt/c/users/vk/naga/tokens/token20/contracts/0.6.10/0x0b498ff89709d3838a063f1dfa463091f9801c2b/SetToken.sol')
+    sol_file = '/mnt/c/users/vk/naga/tokens/token20/contracts/0.6.10/0x0b498ff89709d3838a063f1dfa463091f9801c2b/SetToken.sol'
+    print(sol_file)
+    slither = Slither(sol_file)
     naga = Naga(slither,'SetToken','0x0b498ff89709d3838a063f1dfa463091f9801c2b')
+
     for c in naga.main_contracts:
         if c.is_erc20:
             c.detect_erc20()
-            print(c.summary())
+            print(json.dumps(c.summary(),indent=4))
     
         #c.register_detector(LackEvents)
         #c.register_detector(Paused)
 
 
 if __name__ == "__main__":
-    test_compile('/mnt/c/users/vk/naga/tokens/token20')
+    #test_compile('/mnt/c/users/vk/naga/tokens/token20')
     #test_compile2()
-    #test_20()
+    test_20()
