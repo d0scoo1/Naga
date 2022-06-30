@@ -62,15 +62,13 @@
 from naga.core.erc import (ERC20_STATE_VARIAVLES, ERC721_STATE_VARIAVLES, ERC1155_STATE_VARIAVLES)
 
 def get_common_labels():
-    return ['owners', 'bwList', 'paused']
+    return ['owners', 'owners_1','owners_2','owners_3', 'bwList', 'paused']
 def get_svar_labels():
     svar_labels = []
     for s in ERC20_STATE_VARIAVLES + ERC721_STATE_VARIAVLES + ERC1155_STATE_VARIAVLES:
         if s not in svar_labels:
             svar_labels.append(s[0])
     return svar_labels
-
-import json
 
 def contract_summary(self):
     summary = {
@@ -121,13 +119,7 @@ def contract_summary(self):
         
         if svar in self.svar_label_dict:
             svar_summary['label'] = self.svar_label_dict[svar]
-        '''
-        fs_u_r,fs_u_w,fs_o_r,fs_o_w = self.get_svar_read_written_functions(svar)
-        svar_summary['is_user_read'] = len(fs_u_r) > 0
-        svar_summary['is_user_written'] = len(fs_u_w) > 0
-        svar_summary['is_owner_read'] = len(fs_o_r) > 0
-        svar_summary['is_owner_written'] = len(fs_o_w) > 0
-        '''
+
         summary['state_variables'].append(svar_summary)
 
     for f in self.functions:
@@ -208,6 +200,9 @@ def contract_summary2csv(self):
         'erc': self.summary['erc'],
         #### num ########
         'owners': len(self.summary['erc_svars']['owners']),
+        'owners_1': len(self.summary['erc_svars']['owners_1']),
+        'owners_2': len(self.summary['erc_svars']['owners_2']),
+        'owners_3': len(self.summary['erc_svars']['owners_3']),
         'bwList': len(self.summary['erc_svars']['bwList']),
         'paused': len(self.summary['erc_svars']['paused']),
         ### user_owner read written ####

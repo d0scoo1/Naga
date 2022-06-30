@@ -10,17 +10,21 @@ import json
 
 
 class ContractExp():
-    def __init__(self,contract: Contract,contract_address: None):
+    def __init__(self,contract: Contract,contract_address: None, erc_force = None):
         self.contract = contract
         self.contract_address = contract_address
         self._is_erc20: Optional[bool] = None
         self._is_erc721: Optional[bool] = None
         self._is_erc1155: Optional[bool] = None
+        self.erc_force = erc_force
     
     @property
     def is_erc20(self) -> bool:
-        funcs_sig = [f.full_name for f in self.contract.functions_entry_points]
+        if self.erc_force is not None:
+            return self.erc_force == 'erc20'
+
         if self._is_erc20 is None:
+            funcs_sig = [f.full_name for f in self.contract.functions_entry_points]
             if len(set(ERC20_WRITE_FUNCS_SIG) - set(funcs_sig)) == 0:
                 self._is_erc20 = True
             else:
@@ -29,8 +33,11 @@ class ContractExp():
     
     @property
     def is_erc721(self) -> bool:
-        funcs_sig = [f.full_name for f in self.contract.functions_entry_points]
+        if self.erc_force is not None:
+            return self.erc_force == 'erc721'
+
         if self._is_erc721 is None:
+            funcs_sig = [f.full_name for f in self.contract.functions_entry_points]
             if len(set(ERC721_WRITE_FUNCS_SIG) - set(funcs_sig)) == 0:
                 self._is_erc721 = True
             else:
@@ -39,8 +46,11 @@ class ContractExp():
 
     @property
     def is_erc1155(self) -> bool:
-        funcs_sig = [f.full_name for f in self.contract.functions_entry_points]
+        if self.erc_force is not None:
+            return self.erc_force == 'erc1155'
+    
         if self._is_erc1155 is None:
+            funcs_sig = [f.full_name for f in self.contract.functions_entry_points]
             if len(set(ERC1155_WRITE_FUNCS_SIG) - set(funcs_sig)) == 0:
                 self._is_erc1155 = True
             else:
@@ -94,17 +104,21 @@ class ContractExp():
         self._summary = None
         self._summary_csv = None
 
+    def detect(self):
+        if self.is_erc20: self.detect_erc20()
+        elif self.is_erc721: self.detect_erc721()
+        elif self.is_erc1155: self.detect_erc1155()
 
     def detect_erc20(self):
         self._before_detect_erc_svars()
         self.detect_erc20_state_vars()
         self._after_detect_erc_svars()
-    
+
     def detect_erc721(self):
         self._before_detect_erc_svars()
         self.detect_erc721_state_vars()
         self._after_detect_erc_svars()
-    
+
     def detect_erc1155(self):
         self._before_detect_erc_svars()
         self.detect_erc1155_state_vars()
@@ -195,6 +209,7 @@ class ContractExp():
         return self._owner_in_require_functions
 
 
+
     def _divde_state_vars(self):
 
         """
@@ -219,7 +234,7 @@ class ContractExp():
         for f in self.state_var_read_functions:
             svars = f.function.all_state_variables_read()
             svars_read += svars
-            if f.function.is_constructor: continue
+            if f.is_constructor_or_initializer: continue
             if f in self.owner_in_require_functions: svars_owner_read += svars
             else: svars_user_read += svars
         svars_read = list(set(svars_read))
@@ -229,7 +244,7 @@ class ContractExp():
         for f in self.state_var_written_functions:
             svars = f.function.all_state_variables_written()
             svars_written += svars
-            if f.function.is_constructor: continue
+            if f.is_constructor_or_initializer: continue
             if f in self.owner_in_require_functions: svars_owner_updated += svars
             else: svars_user_written += svars
         svars_written = list(set(svars_written))
@@ -263,14 +278,14 @@ class ContractExp():
         functions_owner_written: List["FunctionExp"] = []
 
         for rf in self.state_var_read_functions_dict[state_var]:
-            if rf.function.is_constructor: continue
+            if rf.is_constructor_or_initializer: continue
             if rf in self.owner_in_require_functions:
                 functions_owner_read.append(rf)
             else:
                 functions_user_read.append(rf)
 
         for wf in self.state_var_written_functions_dict[state_var]:
-            if wf.function.is_constructor: continue
+            if wf.is_constructor_or_initializer: continue
             if wf in self.owner_in_require_functions:
                 functions_owner_written.append(wf)
             else:

@@ -56,6 +56,8 @@ class StateVarLabel(Enum):
 
         return "None"
 
+
+
 def detect_owners_bwList(self):
     """
         搜索所有的 owners
@@ -67,53 +69,62 @@ def detect_owners_bwList(self):
     """
 
     # 检索所有的 function 查看是否有符合类型的 state variable
+
+    all_candidates = [svar for f in self.functions for svar in f.owner_candidates]
     owner_candidates = []
-    for f in self.functions:
-        #print('--',f.function.full_name,f.state_vars_read_in_requires)
-        for svar in f.owner_candidates:
-            # 检查 candidates 所有的写函数是否被 owner 约束
-            # 如果不是构造函数，并且不存在 owner candidates
-            if any(len(f2.owner_candidates) == 0 and not f2.function.is_constructor
-                for f2 in self.state_var_written_functions_dict[svar]
-                ):
-                continue
-            # 否则，增加到 owner_candidates
-            owner_candidates.append(svar)
+    for svar in list(set(all_candidates)):
+        # 检查 candidates 所有的写函数是否被 owner 约束
+         # 如果不是构造函数，并且不存在 owner candidates
 
-
+        if any(len(f.owner_candidates) == 0 and not f.is_constructor_or_initializer
+            for f in self.state_var_written_functions_dict[svar]
+            ):
+            continue
+        owner_candidates.append(svar)
 
     # 检查每个 owner_candidate 依赖的 owner 是否也属于 owner_candidate
     # 首先找出自我依赖的，然后检查剩余的是否依赖于自我依赖
-    owners = []
+    owners_1 = []
     for svar in owner_candidates:
         # 检查是否存在自我依赖：owner 的写函数是 owner in require functions 的子集 (上一步中，我们已经确定每个 owner 的写函数都被 owner_candidates 约束)
 
         read_in_require_funcs = self.state_var_read_in_require_functions_dict[svar]
         # 去掉 written_funcs 中的构造函数
-        written_funcs =[f for f in self.state_var_written_functions_dict[svar] if not f.function.is_constructor]
+        written_funcs =[f for f in self.state_var_written_functions_dict[svar] if not f.is_constructor_or_initializer ]
 
         if len(set(written_funcs) - set(read_in_require_funcs)) > 0:
             continue
-        owners.append(svar)
+        owners_1.append(svar)
     
     # 检查剩余的 owner 是否依赖于 owner
     # 找出每个 candidates 的写函数，得到他们写函数的约束的 owner,如果约束 owner 存在于上述 owner 中，则成立，
-    owners = list(set(owners))
-    owner_candidates = list(set(owner_candidates)-set(owners))
+    owners_1 = list(set(owners_1))
+    owner_candidates = list(set(owner_candidates)-set(owners_1))
 
+    owners_2 = []
     for svar in owner_candidates:
         dep_owners = []
-        for t_wf in self.state_var_written_functions_dict[svar]: dep_owners += t_wf.owner_candidates # 这里 构造函数不存在 owner_candidates
-        if len(set(owners) - set(dep_owners)) == 0:
-            owners.append(svar)
+        for t_wf in [f for f in self.state_var_written_functions_dict[svar] if not f.is_constructor_or_initializer]: dep_owners += t_wf.owner_candidates # 这里 构造函数不存在 owner_candidates
+        if len(set(dep_owners) - set(owners_1)) == 0:
+            owners_2.append(svar)
+
+    owner_candidates = list(set(owner_candidates)-set(owners_2))
+    owners_3 = []
+    for svar in owner_candidates:
+        dep_owners = []
+        for t_wf in [f for f in self.state_var_written_functions_dict[svar] if not f.is_constructor_or_initializer]: dep_owners += t_wf.owner_candidates # 这里 构造函数不存在 owner_candidates
+        if len(set(dep_owners) - set(owners_1 + owners_2)) == 0:
+            owners_3.append(svar)
+
 
     # 如果有 mapping，则需要检查是否为 bwList
     mapping_owners = []
+    owners = owners_1 + owners_2 + owners_3
     for svar in owners:
         if isinstance(svar.type, MappingType):
             mapping_owners.append(svar)
     if len(mapping_owners) == 0:
-        self.label_svars_dict.update({'owners': owners, 'bwList':[]})
+        self.label_svars_dict.update({'owners': owners,'owners_1':owners_1,'owners_2':owners_2, 'owners_3':owners_3,'bwList':[]})
         return
 
     # blackList / whiteList 和 admin 有相同的模式，因此，需要排除 blackList / whiteList
@@ -126,6 +137,9 @@ def detect_owners_bwList(self):
                 bwList.append(svar)
     self.label_svars_dict.update({
         'owners':list(set(owners)-set(bwList)),
+        'owners_1':list(set(owners_1)-set(bwList)),
+        'owners_2':list(set(owners_2)-set(bwList)),
+        'owners_3':list(set(owners_3)-set(bwList)),
         'bwList':list(set(bwList))
         })
 
@@ -221,7 +235,7 @@ def detect_lack_event_functions(self):
     lack_event_owner_functions = []
     lack_event_user_functions = []
     for f in self.state_var_written_functions:
-        if not f.function.is_constructor and len(f.events) == 0:
+        if not f.is_constructor_or_initializer and len(f.events) == 0:
             if f in self.owner_in_require_functions:
                 lack_event_owner_functions.append(f)
             else:
