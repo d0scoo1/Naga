@@ -43,14 +43,16 @@ def irs_ssa_track(irs, tainted_vars=None):
 
     if len(irs) == 0: return []
 
+    tainted_ir = None
     if tainted_vars is None:
         tainted_vars = []
         tainted_ir = irs.pop()
         for r in tainted_ir.read:
             tainted_vars.append([r]) # 二维数组
     else:
-        irs.pop()
+        tainted_ir = irs.pop()
 
+    from_function = tainted_ir.node.function
     while irs:
         ir = irs.pop()
         if isinstance(ir,NO_LEFT_VALUE_OPERATIONS): #,PhiCallback,SolidityCall,LibraryCall,LowLevelCall,HighLevelCall
@@ -62,8 +64,8 @@ def irs_ssa_track(irs, tainted_vars=None):
         lval = ir.lvalue  # 由于是从 read 开始查找， read 必有左值，所以这里不进行判断
         rval = []
         if isinstance(ir, InternalCall): # 如果是 internalcall
-            rval = internalCall_track(ir) # internalCall_track 返回的是一个 [[],[]] 需要转换为 []
-            # rval =sum(rval,[])
+            #print("----internalcall",ir,from_function)
+            rval = internalCall_track(ir,from_function) # internalCall_track 返回的是一个 [[],[]] 需要转换为 []
         else:
             rval = ir.read
 
@@ -83,16 +85,18 @@ def irs_ssa_track(irs, tainted_vars=None):
     return tainted_vars
 
 
-def internalCall_track(t_ir):
-
+def internalCall_track(t_ir,from_function=None):
+    """
+        from_function: 防止循环调用
+    """
     irs = [ir for n in t_ir.function.nodes for ir in n.irs_ssa] # all_nodes()
     if len(irs) == 0: return [] # 由于后面使用了 sum([[]],[]),所以这里必须返回二维数组
     rvals = []
     index = 0
     for ir in irs:
         index += 1
-        if isinstance(ir, Return):
-           rvals += sum(irs_ssa_track(irs[0:index]),[])
+        if isinstance(ir, Return) and ir.function != from_function:
+            rvals += sum(irs_ssa_track(irs[0:index]),[])
     if rvals != []:
         return rvals
     
@@ -115,7 +119,7 @@ def internalCall_track(t_ir):
                 index += 1
                 if isinstance(ir,NO_LEFT_VALUE_OPERATIONS):
                     continue
-                if ir.lvalue is not None and ir.lvalue.non_ssa_version == ret_val:
+                if ir.lvalue is not None and ir.lvalue.non_ssa_version == ret_val and ir.function != from_function:
                     rvals += sum(irs_ssa_track(irs[0:index]),[])
 
     return rvals

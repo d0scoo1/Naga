@@ -57,7 +57,6 @@ class StateVarLabel(Enum):
         return "None"
 
 
-
 def detect_owners_bwList(self):
     """
         搜索所有的 owners
@@ -71,6 +70,7 @@ def detect_owners_bwList(self):
     # 检索所有的 function 查看是否有符合类型的 state variable
 
     all_candidates = [svar for f in self.functions for svar in f.owner_candidates]
+
     owner_candidates = []
     for svar in list(set(all_candidates)):
         # 检查 candidates 所有的写函数是否被 owner 约束

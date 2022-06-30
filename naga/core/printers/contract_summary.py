@@ -74,6 +74,7 @@ def contract_summary(self):
     summary = {
         'contract_name': self.contract.name,
         'address': self.contract_address,
+        'version': self.version,
         'is_upgradeable_proxy': self.is_upgradeable_proxy,
         'is_upgradeable': self.is_upgradeable,
         'erc': self.get_erc_str,
@@ -195,6 +196,7 @@ def contract_summary2csv(self):
     line = {
         'address':  self.summary['address'],
         'contract_name': self.summary['contract_name'],
+        'version': self.version,
         'is_upgradeable_proxy': self.summary['is_upgradeable_proxy'],
         'is_upgradeable': self.summary['is_upgradeable'],
         'erc': self.summary['erc'],

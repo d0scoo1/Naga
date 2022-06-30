@@ -10,13 +10,14 @@ import json
 
 
 class ContractExp():
-    def __init__(self,contract: Contract,contract_address: None, erc_force = None):
+    def __init__(self,contract: Contract,contract_address: None, erc_force = None,version=None):
         self.contract = contract
         self.contract_address = contract_address
         self._is_erc20: Optional[bool] = None
         self._is_erc721: Optional[bool] = None
         self._is_erc1155: Optional[bool] = None
         self.erc_force = erc_force
+        self.version = version
     
     @property
     def is_erc20(self) -> bool:
