@@ -1,5 +1,3 @@
-tests
-tools
 logs.txt
 errors.txt
 **/__pycache__
@@ -10,3 +8,4 @@ results
 .vscode
 contratct721.csv
 examples
+old.test
