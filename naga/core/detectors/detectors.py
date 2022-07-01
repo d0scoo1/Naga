@@ -110,11 +110,14 @@ def detect_owners_bwList(self):
 
     owner_candidates = list(set(owner_candidates)-set(owners_2))
     owners_3 = []
-    for svar in owner_candidates:
-        dep_owners = []
-        for t_wf in [f for f in self.state_var_written_functions_dict[svar] if not f.is_constructor_or_initializer]: dep_owners += t_wf.owner_candidates # 这里 构造函数不存在 owner_candidates
-        if len(set(dep_owners) - set(owners_1 + owners_2)) == 0:
-            owners_3.append(svar)
+    owners_3_index = 0
+    while owners_3_index < len(owner_candidates):
+        for svar in owner_candidates:
+            dep_owners = []
+            for t_wf in [f for f in self.state_var_written_functions_dict[svar] if not f.is_constructor_or_initializer]: dep_owners += t_wf.owner_candidates # 这里 构造函数不存在 owner_candidates
+            if len(set(dep_owners) - set(owners_1 + owners_2 + owners_3)) == 0:
+                owners_3.append(svar)
+        owners_3_index += 1
 
 
     # 如果有 mapping，则需要检查是否为 bwList
