@@ -1,10 +1,8 @@
 import sys
-sys.path.append(".")
-print(sys.path)
+sys.path.append(r"/data/disk_16t_2/kailun/smart_contract_centralization/naga")
 
 from naga_test import NagaTest
 import os
-import json
 from solc_utils import set_solc
 from slither import Slither
 from tqdm import tqdm
@@ -184,6 +182,6 @@ def test_erc1155():
     etest.run()
 
 if __name__ == "__main__":
-    test_erc20()
-    #test_erc721()
-    #test_erc1155()
+    #test_erc20()
+    test_erc721()
+    test_erc1155()
