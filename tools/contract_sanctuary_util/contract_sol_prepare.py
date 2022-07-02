@@ -142,6 +142,6 @@ def copy_sol(mainnet_path, contracts_path):
 
 if __name__ == "__main__":
     mainnet_path = "/data/disk_16t_2/kailun/smart_contract_centralization/smart-contract-sanctuary-ethereum/contracts/mainnet/"
-    contracts_path = "/data/disk_16t_2/kailun/smart contracts/ethereum_mainnet/"
+    contracts_path = "/data/disk_16t_2/kailun/smart_contract_centralization/test_contracts/ethereum_mainnet/"
 
     copy_sol(mainnet_path, contracts_path)

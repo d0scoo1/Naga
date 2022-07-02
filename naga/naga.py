@@ -19,7 +19,7 @@ class Naga():
     def _get_entry_contracts(self):
         contracts = []
         if self.contract_name is not None:
-            contracts =  [ContractExp(c,self.contract_address, self.erc_force, self.version, self.ether) for c in self.slither.get_contract_from_name(self.contract_name)]
+            contracts =  [ContractExp(c,self) for c in self.slither.get_contract_from_name(self.contract_name)]
         if len(contracts) == 0:
             contracts_derived = [c for c in self.slither.contracts_derived]
             contracts_called = [] # (contract,library)
@@ -28,7 +28,7 @@ class Naga():
                 for f in c.all_library_calls + c.all_high_level_calls:
                     calls.append(f[0])
                 contracts_called += calls
-            contracts = [ContractExp(c,self.contract_address,self.erc_force, self.version, self.ether) for c in list(set(contracts_derived) - set(contracts_called))]
+            contracts = [ContractExp(c,self) for c in list(set(contracts_derived) - set(contracts_called))]
         return contracts
 
     def _get_erc_contracts(self):

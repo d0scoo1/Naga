@@ -1,5 +1,6 @@
 import sys
 sys.path.append(".")
+print(sys.path)
 
 from naga_test import NagaTest
 import os
@@ -149,7 +150,7 @@ def _get_entry_sol(contract_addr_dir,contract_name):
     return os.path.join(contract_addr_dir,sol_set.pop()+".sol") # 否则，随便返回一个匹配
 
 
-etherscan_test_root_path = '/mnt/c/users/vk/naga/tokens/'
+etherscan_test_root_path = '/data/disk_16t_2/kailun/smart_contract_centralization/test_contracts/etherscan_token/'
 def test_erc20():
     tag = 'etherscan_erc20'
     contractsJson_path = etherscan_test_root_path+'token20/contracts.json'

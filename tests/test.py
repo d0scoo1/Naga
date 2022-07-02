@@ -1,49 +1,16 @@
-
 import sys
-sys.path.append(".")
+sys.path.append(r"/data/disk_16t_2/kailun/smart_contract_centralization/naga")
+
 from solc_utils import set_solc
 from slither import Slither
 from naga.naga import Naga
-from etherscan_test import EtherscanTest
-
-def test_erc20():
-    tag = 'etherscan_erc20'
-    contractsJson_path = '/mnt/c/users/vk/naga/tokens/token20/contracts.json'
-    contracts_dir = '/mnt/c/users/vk/naga/tokens/token20/contracts'
-    output_dir = '/mnt/c/users/vk/naga/tokens/token20/results_erc20'
-    is_clean_env = True
-    erc_force = 'erc20'
-    nagaT = EtherscanTest(tag,contractsJson_path,contracts_dir,output_dir,is_clean_env,erc_force)
-    nagaT.run()
-
-def test_erc721():
-    tag = 'etherscan_erc721'
-    contractsJson_path = '/mnt/c/users/vk/naga/tokens/token721/contracts.json'
-    contracts_dir = '/mnt/c/users/vk/naga/tokens/token721/contracts'
-    output_dir = '/mnt/c/users/vk/naga/tokens/token721/results_erc721'
-    is_clean_env = True
-    erc_force = 'erc721'
-
-    nagaT = EtherscanTest(tag,contractsJson_path,contracts_dir,output_dir,is_clean_env,erc_force)
-    nagaT.run()
-
-def test_erc1155():
-    tag = 'etherscan_erc1155'
-    contractsJson_path = '/mnt/c/users/vk/naga/tokens/token1155/contracts.json'
-    contracts_dir = '/mnt/c/users/vk/naga/tokens/token1155/contracts'
-    output_dir = '/mnt/c/users/vk/naga/tokens/token1155/results_erc1155'
-    is_clean_env = True
-    erc_force = 'erc1155'
-
-    nagaT = EtherscanTest(tag,contractsJson_path,contracts_dir,output_dir,is_clean_env,erc_force)
-    nagaT.run()
 
 def test_one():
-    set_solc('0.5.12')
-    sol_file = '/mnt/c/users/vk/naga/tokens/token20/contracts/0.5.12/0x5d3a536e4d6dbd6114cc1ead35777bab948e3643/CErc20Delegator.sol'
+    set_solc('0.5.0')
+    sol_file = '/data/disk_16t_2/kailun/smart_contract_centralization/test_contracts/etherscan_token/token20/contracts/0.5.0/0x0c6f5f7d555e7518f6841a79436bd2b1eef03381/CocosToken.sol'
     print(sol_file)
     slither = Slither(sol_file)
-    naga = Naga(slither,'CErc20Delegator','0x312ca0592a39a5fa5c87bb4f1da7b77544a91b87','erc20','0.5.12')
+    naga = Naga(slither,'CocosToken','0x312ca0592a39a5fa5c87bb4f1da7b77544a91b87','erc20','0.5.0')
 
     for c in naga.entry_contracts:
         c.detect()
@@ -53,6 +20,4 @@ def test_one():
         print(c.summary_json())
 
 if __name__ == "__main__":
-    #test_erc20()
-    #test_erc721()
     test_one()

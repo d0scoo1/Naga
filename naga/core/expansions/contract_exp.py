@@ -10,15 +10,20 @@ import json
 
 
 class ContractExp():
-    def __init__(self,contract: Contract,contract_address: None, erc_force = None,version=None, ether = 0):
+    #def __init__(self,contract: Contract,contract_address: None, erc_force = None,version = None,ether_balance = 0,txcount = 0, date = ''):
+    def __init__(self,contract,nagaObj) -> None:
         self.contract = contract
-        self.contract_address = contract_address
+        self.contract_address = nagaObj.contract_address
+        self.erc_force = nagaObj.erc_force
+        self.version = nagaObj.version
+        self.ether_balance = nagaObj.ether_balance
+        self.txcount = nagaObj.txcount
+        self.date = nagaObj.date
         self._is_erc20: Optional[bool] = None
         self._is_erc721: Optional[bool] = None
         self._is_erc1155: Optional[bool] = None
-        self.erc_force = erc_force
-        self.version = version
-        self.ether = ether
+ 
+
     
     @property
     def is_erc20(self) -> bool:
