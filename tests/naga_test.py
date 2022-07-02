@@ -6,16 +6,16 @@ from tqdm import tqdm
 from naga.naga import Naga
 import time
 """
-    首先我们从 contracts_dir 中依次读取每个合约
+    首先我们从 contract_dir 中依次读取每个合约
     然后从 contractsJson 中查询这个合约是否是代理，如果是代理，则跳过。
     如果是 Proxy，我们将只进行标记并跳过
 """
 
 class NagaTest():
-    def __init__(self,tag,contractsJson_path,contracts_dir,output_dir,is_clean_env = False,erc_force = None) -> None:
+    def __init__(self,tag,contractsJson_path,contract_dir,output_dir,is_clean_env = False,erc_force = None) -> None:
         self.tag = tag # test tag
         self.contractsJson_path = contractsJson_path
-        self.contracts_dir = contracts_dir # version/address/contract.sol
+        self.contract_dir = contract_dir # version/address/contract.sol
         self.output_dir = output_dir
         self.is_clean_env = is_clean_env
         self.erc_force = erc_force
@@ -41,7 +41,6 @@ class NagaTest():
         self.test_cost = 0
 
         self.init_env()
-
 
     def init_env(self):
         if self.is_clean_env:
@@ -101,7 +100,7 @@ class NagaTest():
     def run(self):
         contractsJson = self.load_contractsJson()
         csv_first_line_is_written = False
-        for version in tqdm(os.listdir(self.contracts_dir)):
+        for version in tqdm(os.listdir(self.contract_dir)):
             if version == 'noSolc':
                 continue
             # Skip the version that is 0.4.x
@@ -110,7 +109,7 @@ class NagaTest():
                 continue
             # Set the solc version
             set_solc(version)
-            version_dir = os.path.join(self.contracts_dir, version)
+            version_dir = os.path.join(self.contract_dir, version)
             for contract_addr in os.listdir(version_dir):
                 # Skip Proxy contracts
                 if contractsJson[contract_addr]['Proxy'] == '1':
@@ -231,3 +230,13 @@ def _get_entry_sol(contract_addr_dir,contract_name):
     
     return os.path.join(contract_addr_dir,sol_set.pop()+".sol") # 否则，随便返回一个匹配
 
+
+def count_04_contracts(contract_dir):
+    """
+        统计 0.4 版本的合约数量
+    """
+    count = 0
+    for version in tqdm(os.listdir(contract_dir)):
+            if version.startswith('0.4.'):
+                count += len(os.listdir(contract_dir))
+    return count

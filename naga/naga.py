@@ -4,18 +4,19 @@ from naga.core.erc import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_
 from slither import Slither
 class Naga():
 
-    def __init__(self,slither:Slither,contract_address=None,contract_name = None, erc_force = None, version = None) -> None:
+    def __init__(self,slither:Slither,contract_address=None,contract_name = None, erc_force = None, version = None, ether = 0) -> None:
         self.slither = slither
         self.contract_name = contract_name
         self.contract_address = contract_address
         self.erc_force = erc_force
         self.version = version
+        self.ether = ether
         self.entry_contracts = self._get_entry_contracts()
         
     def _get_entry_contracts(self):
         contracts = []
         if self.contract_name is not None:
-            contracts =  [ContractExp(c,self.contract_address, self.erc_force, self.version) for c in self.slither.get_contract_from_name(self.contract_name)]
+            contracts =  [ContractExp(c,self.contract_address, self.erc_force, self.version, self.ether) for c in self.slither.get_contract_from_name(self.contract_name)]
         if len(contracts) == 0:
             contracts_derived = [c for c in self.slither.contracts_derived]
             contracts_called = [] # (contract,library)
@@ -24,7 +25,7 @@ class Naga():
                 for f in c.all_library_calls + c.all_high_level_calls:
                     calls.append(f[0])
                 contracts_called += calls
-            contracts = [ContractExp(c,self.contract_address,self.erc_force, self.version) for c in list(set(contracts_derived) - set(contracts_called))]
+            contracts = [ContractExp(c,self.contract_address,self.erc_force, self.version, self.ether) for c in list(set(contracts_derived) - set(contracts_called))]
         return contracts
 
     def _get_erc_contracts(self):
