@@ -1,9 +1,10 @@
+
 import sys
 sys.path.append(".")
 from solc_utils import set_solc
 from slither import Slither
 from naga.naga import Naga
-from naga_test import NagaTest
+from etherscan_test import EtherscanTest
 
 def test_erc20():
     tag = 'etherscan_erc20'
@@ -12,7 +13,7 @@ def test_erc20():
     output_dir = '/mnt/c/users/vk/naga/tokens/token20/results_erc20'
     is_clean_env = True
     erc_force = 'erc20'
-    nagaT = NagaTest(tag,contractsJson_path,contracts_dir,output_dir,is_clean_env,erc_force)
+    nagaT = EtherscanTest(tag,contractsJson_path,contracts_dir,output_dir,is_clean_env,erc_force)
     nagaT.run()
 
 def test_erc721():
@@ -23,7 +24,7 @@ def test_erc721():
     is_clean_env = True
     erc_force = 'erc721'
 
-    nagaT = NagaTest(tag,contractsJson_path,contracts_dir,output_dir,is_clean_env,erc_force)
+    nagaT = EtherscanTest(tag,contractsJson_path,contracts_dir,output_dir,is_clean_env,erc_force)
     nagaT.run()
 
 def test_erc1155():
@@ -34,7 +35,7 @@ def test_erc1155():
     is_clean_env = True
     erc_force = 'erc1155'
 
-    nagaT = NagaTest(tag,contractsJson_path,contracts_dir,output_dir,is_clean_env,erc_force)
+    nagaT = EtherscanTest(tag,contractsJson_path,contracts_dir,output_dir,is_clean_env,erc_force)
     nagaT.run()
 
 def test_one():

@@ -67,6 +67,10 @@ class ContractExp():
         return 'none'
     
     @property
+    def is_erc(self):
+        return self.is_erc20 or self.is_erc721 or self.is_erc1155
+    
+    @property
     def is_upgradeable(self) -> bool:
         return self.contract.is_upgradeable
     
