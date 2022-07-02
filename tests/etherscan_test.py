@@ -48,7 +48,7 @@ class EtherscanTest(NagaTest):
             # Set the solc version
             set_solc(version)
             version_dir = os.path.join(self.contract_dir, version)
-            for contract_addr in os.listdir(version_dir):
+            for contract_addr in tqdm(os.listdir(version_dir),desc=version):
                 # Skip Proxy contracts
                 if contractsJson[contract_addr]['Proxy'] == '1':
                     self.contract_is_proxy += 1

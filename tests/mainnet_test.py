@@ -28,7 +28,7 @@ class MainnetTest(NagaTest):
             # Set the solc version
             set_solc(version)
             version_dir = os.path.join(self.contract_dir, version)
-            for contract_sol in os.listdir(version_dir):
+            for contract_sol in os.listdir(version_dir,desc=version):
                 # Skip contracts that have been tested
                 if contract_sol in self.contracts_tested: continue
                 
