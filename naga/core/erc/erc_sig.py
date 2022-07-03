@@ -22,5 +22,5 @@ IERC1155_EVENTS_SIG = [
 
 ERC20_WRITE_FUNCS_SIG = ["transfer(address,uint256)","approve(address,uint256)","transferFrom(address,address,uint256)"]
 ERC721_WRITE_FUNCS_SIG = ["safeTransferFrom(address,address,uint256)","transferFrom(address,address,uint256)","approve(address,uint256)","setApprovalForAll(address,bool)","safeTransferFrom(address,address,uint256,bytes)"]
-ERC1155_WRITE_FUNCS_SIG = [
-"setApprovalForAll(address,bool)","safeTransferFrom(address,address,uint256,uint256,bytes)","safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)",]
+ERC1155_WRITE_FUNCS_SIG = ["setApprovalForAll(address,bool)","safeTransferFrom(address,address,uint256,uint256,bytes)","safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)"]
+

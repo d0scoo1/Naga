@@ -29,12 +29,16 @@ class NagaTest():
         self.contracts_tested = set()
 
         self.contract_version_0_4 = 0
+        self.contract_num = 0
         self.contract_is_proxy = 0
         self.proxy_has_implement = 0
         self.slither_compiler_error = 0
         self.not_find_entry_contract = 0
         self.naga_test_success = 0
         self.naga_test_fail = 0
+        self.naga_erc_20 = 0
+        self.naga_erc_721 = 0
+        self.naga_erc_1155 = 0
         self.slither_compiler_cost = 0
         self.slither_pass = 0
         self.naga_test_cost = 0

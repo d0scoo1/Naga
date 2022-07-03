@@ -7,7 +7,7 @@ from naga.naga import Naga
 
 def test_one():
     set_solc('0.8.7')
-    sol_file = '/data/disk_16t_2/kailun/smart_contract_centralization/test_contracts/etherscan_token/token721/contracts/0.8.7/0x9fcb1ebcc4bfcf1c8372b7638197a6beed0c2719/Items.sol'
+    sol_file = '/data/disk_16t_2/kailun/smart_contract_centralization/test_contracts/etherscan_token/token20/contracts/0.8.1/0xdef1fac7bf08f173d286bbbdcbeeade695129840/DefiFactoryToken.sol'
     print(sol_file)
     slither = None
     try:
@@ -23,7 +23,7 @@ def test_one():
         for svar in c.label_svars_dict['owners']:
             print(svar)
 
-        print(c.summary_json())
+        #print(c.summary_json())
 
 if __name__ == "__main__":
     test_one()

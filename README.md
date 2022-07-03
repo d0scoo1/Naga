@@ -1,5 +1,5 @@
 # naga
-
+A tool that detect state variables.
 # Preparation
 ## Python
 Version: 3.8.10
@@ -27,10 +27,9 @@ is in your $PATH
 `source /etc/profile`
 
 
-
-
-
 ## Install Slither
 https://github.com/crytic/slither#how-to-install
 
 `pip3 install slither-analyzer`
+
+# Usages

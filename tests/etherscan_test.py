@@ -183,5 +183,5 @@ def test_erc1155():
 
 if __name__ == "__main__":
     #test_erc20()
-    test_erc721()
+    #test_erc721()
     test_erc1155()

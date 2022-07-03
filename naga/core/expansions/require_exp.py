@@ -47,8 +47,8 @@ class RequireExp(NodeExp):
         """
             如果 all_read_vars_group 中 local_vars 为空，state_vars 中有 address 或 mapping(address => bool)，且 solidity_vars 中存在一个 msg.sender，则我们认为它可能是 owner
         """
-
-        #print(self.node.function,self.all_read_vars_group)
+        #if str(self.node.function) == "updateNameAndSymbol":
+            #print(self.node.function,self.all_read_vars_group)
 
         if len(self.all_read_vars_group.local_vars) > 0 or SolidityVariableComposed('msg.sender') not in self.all_read_vars_group.solidity_vars:
             return []
