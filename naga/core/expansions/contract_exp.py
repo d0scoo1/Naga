@@ -10,7 +10,6 @@ import json
 
 
 class ContractExp():
-    #def __init__(self,contract: Contract,contract_address: None, erc_force = None,version = None,ether_balance = 0,txcount = 0, date = ''):
     def __init__(self,contract,nagaObj) -> None:
         self.contract = contract
         self.contract_address = nagaObj.contract_address
@@ -85,7 +84,7 @@ class ContractExp():
         return self.contract.name
 
     #######################################
-    ####    我们手动执行 detect 方法    ####
+    ####        detect  functions      ####
     #######################################
 
     from naga.core.detectors import (

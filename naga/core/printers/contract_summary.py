@@ -84,7 +84,7 @@ def contract_summary(self):
         'state_variables': [],
         'erc_svars':{},
         'erc_svars_rw':{},
-        'svar_user_owner_rw':{ # 我们只关心用户读写和owner 写， 也就是末位为 1 的
+        'svar_user_owner_rw':{ # user_read,user_write,owner_read,owner_write
             '0000':0,
             '0001':0, #
             '0010':0,

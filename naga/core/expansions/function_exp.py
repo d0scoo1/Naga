@@ -132,10 +132,6 @@ class FunctionExp():
     """
     def __str__(self) -> str:
         return self.function.name
-   
-   
-
-
 
 
 

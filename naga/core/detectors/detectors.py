@@ -5,7 +5,7 @@ from slither.core.variables.state_variable import StateVariable
 from slither.core.solidity_types.elementary_type import ElementaryType
 from slither.core.solidity_types.mapping_type import MappingType
 
-
+'''
 from enum import Enum
 class StateVarLabel(Enum):
     UNKNOWN = 0x0
@@ -55,7 +55,7 @@ class StateVarLabel(Enum):
             return "URI"
 
         return "None"
-
+'''
 
 def detect_owners_bwList(self):
     """
