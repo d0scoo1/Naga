@@ -22,9 +22,7 @@ class ContractExp():
         self._is_erc20: Optional[bool] = None
         self._is_erc721: Optional[bool] = None
         self._is_erc1155: Optional[bool] = None
- 
 
-    
     @property
     def is_erc20(self) -> bool:
         if self.erc_force is not None:

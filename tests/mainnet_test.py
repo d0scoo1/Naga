@@ -94,9 +94,9 @@ class MainnetTest(NagaTest):
 def test_mainnet():
     mainnet_path = '/data/disk_16t_2/kailun/smart_contract_centralization/test_contracts/ethereum_mainnet/'
     tag = 'mainnet'
-    contractsJson_path =  '/data/disk_16t_2/kailun/smart_contract_centralization/test_contracts/ethereum_mainnet/contracts.json'
-    contracts_dir =  '/data/disk_16t_2/kailun/smart_contract_centralization/test_contracts/ethereum_mainnet/'
-    output_dir =  '/data/disk_16t_2/kailun/smart_contract_centralization/test_contracts/results_mainnet'
+    contractsJson_path =  mainnet_path + 'ethereum_mainnet_contracts.json'
+    contracts_dir =  mainnet_path + 'contracts'
+    output_dir =  mainnet_path + 'results_mainnet'
     is_clean_env = True
     erc_force = None
 
