@@ -1,8 +1,8 @@
 [submodule "ethereum_mainnet"]
-	path = contracts/ethereum_mainnet
+	path = tests/contracts/ethereum_mainnet
 	branch = master
 	url = https://github.com/tintinweb/smart-contract-sanctuary.git
 [submodule "etherscan_token"]
-	path = contracts/etherscan_token
+	path = tests/contracts/etherscan_token
 	branch = master
 	url = git@github.com:tintinweb/smart-contract-sanctuary-arbitrum.git
