@@ -128,7 +128,7 @@ def contract_summary(self):
 
     for f in self.functions:
         f_summary = {
-            'name': f.function.name,
+            'name': f.function.full_name,
             'state_variables_read':[svar.name for svar in f.function.all_state_variables_read()],
             'state_variables_written': [svar.name for svar in f.function.all_state_variables_written()],
             'owner_in_require': f in self.owner_in_require_functions,
@@ -184,6 +184,7 @@ def contract_summary(self):
                 lack_event_owner_erc_svars[self.svar_label_dict[svar]] += 1
             else:
                 lack_event_owner_erc_svars['no_label'] += 1
+    lack_event_owner_erc_svars['owners'] = lack_event_owner_erc_svars['owners_1'] + lack_event_owner_erc_svars['owners_2'] + lack_event_owner_erc_svars['owners_3']
     summary['lack_event_user_erc_svars'] = lack_event_user_erc_svars
     summary['lack_event_owner_erc_svars'] = lack_event_owner_erc_svars
     
@@ -239,9 +240,9 @@ def contract_summary2csv(self):
         'lack_event_user_functions_num': 0, #
         'lack_event_owner_functions_num':  0, #
 
-        'l_e_f_user_update_owners': self.summary['lack_event_user_erc_svars']['owners'],
-        'l_e_f_user_update_bwList': self.summary['lack_event_user_erc_svars']['bwList'],
-        'l_e_f_user_update_paused': self.summary['lack_event_user_erc_svars']['paused'],
+        #'l_e_f_user_update_owners': ,
+        #'l_e_f_user_update_bwList': self.summary['lack_event_user_erc_svars']['bwList'],
+        #'l_e_f_user_update_paused': self.summary['lack_event_user_erc_svars']['paused'],
         'l_e_f_user_update_name': self.summary['lack_event_user_erc_svars']['name'],
         'l_e_f_user_update_symbol': self.summary['lack_event_user_erc_svars']['symbol'],
         'l_e_f_user_update_decimals': self.summary['lack_event_user_erc_svars']['decimals'],
@@ -254,7 +255,11 @@ def contract_summary2csv(self):
         'l_e_f_user_update_uri': self.summary['lack_event_user_erc_svars']['uri'],
         'l_e_f_user_update_no_label': self.summary['lack_event_user_erc_svars']['no_label'],
 
-        'l_e_f_owner_update_owners': self.summary['lack_event_owner_erc_svars']['owners'],
+        'l_e_f_owner_update_owners': self.summary['lack_event_owner_erc_svars']['owners_1'] + self.summary['lack_event_owner_erc_svars']['owners_2'] + self.summary['lack_event_owner_erc_svars']['owners_3'],
+        'l_e_f_owner_update_owners_1': self.summary['lack_event_owner_erc_svars']['owners_1'],
+        'l_e_f_owner_update_owners_2': self.summary['lack_event_owner_erc_svars']['owners_2'],
+        'l_e_f_owner_update_owners_3': self.summary['lack_event_owner_erc_svars']['owners_3'],
+
         'l_e_f_owner_update_bwList':self.summary['lack_event_owner_erc_svars']['bwList'],
         'l_e_f_owner_update_paused': self.summary['lack_event_owner_erc_svars']['paused'],
         'l_e_f_owner_update_name': self.summary['lack_event_owner_erc_svars']['name'],

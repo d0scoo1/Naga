@@ -50,10 +50,10 @@ class MainnetTest(NagaTest):
                     if len(cs) != 1:
                         slither = None
                         self.not_find_entry_contract += 1
-                        self._write_line(self.error_logs,'slither,no contract,'+contract_addr+','+contract_name)
+                        self._write_line(self.error_logs,'slither,no contract,'+contract_addr+','+contract_name+","+sol_path)
                 except:
                     slither = None
-                    self._write_line(self.error_logs,'slither,compiler error,'+contract_addr+','+contract_name)
+                    self._write_line(self.error_logs,'slither,compiler error,'+contract_addr+','+contract_name+','+ sol_path)
                 
                 if slither is None: continue
 
@@ -98,6 +98,7 @@ def test_mainnet():
     contracts_dir =  mainnet_path + 'contracts'
     output_dir =  mainnet_path + 'results_mainnet'
     is_clean_env = True
+    #is_clean_env = False
     erc_force = None
 
     mtest = MainnetTest(tag,contractsJson_path,contracts_dir,output_dir,is_clean_env,erc_force)

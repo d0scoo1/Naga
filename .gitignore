@@ -1,1 +1,5 @@
 **/__pycache__
+tests/contracts/ERC20.sol
+tests/test.py
+tests/contracts/*
+

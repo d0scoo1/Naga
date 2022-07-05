@@ -87,7 +87,7 @@ def _format_contracts_json(contracts_index):
     return contracts_index
 
 
-def copy_sol(mainnet_path, contracts_path):
+def copy_sol(mainnet_path, contracts_path,passed_contracts):
     '''
     copy contracts file from ethereum/contracts/mainnet
 
@@ -125,9 +125,19 @@ def copy_sol(mainnet_path, contracts_path):
             target_dir = os.path.join(contracts_path, c['compiler'])  # mainnet/version/address_name.sol
             if not os.path.exists(target_dir):
                 os.makedirs(target_dir)
-            target_file = os.path.join(target_dir, c['address'][2:42] + "_" + c['name'] + ".sol")
+            
+            file_name =  c['address'][2:42] + "_" + c['name'] + ".sol"
+            target_file = os.path.join(target_dir,file_name)
             # print(target_file)
-            copy(source_file, target_file)
+            if file_name in passed_contracts:
+                copy(source_file, target_file)
+            else:  # import problem
+                with open(source_file, "r") as fr:
+                    new_sol = _invalid_import(fr.readlines())
+                fr.close()
+                with open(target_file, "w") as fw:
+                    fw.writelines(new_sol)
+                fw.close()
         else:
             c['solc'] = False
 
@@ -140,8 +150,28 @@ def copy_sol(mainnet_path, contracts_path):
     contracts_summary(contracts_index)
 
 
-if __name__ == "__main__":
-    mainnet_path = "/data/disk_16t_2/kailun/smart_contract_centralization/smart-contract-sanctuary-ethereum/contracts/mainnet/"
-    contracts_path = "/data/disk_16t_2/kailun/smart_contract_centralization/test_contracts/ethereum_mainnet/"
+######################################################################
+"""
+    Some contract solidity codes are not commented out 'import ', which will cause the compiler to fail.
+"""
 
-    copy_sol(mainnet_path, contracts_path)
+def _invalid_import(lines):
+    new_lines = []
+    for line in lines:
+        if line.lstrip().find('import ') == 0:
+            line = line.replace('/*', '\n/*') # 防止后面有注释
+            line = line.replace('import ', '// File: ')
+        new_lines.append(line)
+
+    return new_lines
+
+def load_passed_contract_set(path):
+    passed_contracts = os.listdir(path)
+    return set(passed_contracts)
+#####################################################################
+
+
+if __name__ == "__main__":
+    #mainnet_path = "/data/disk_16t_2/kailun/smart_contract_centralization/smart-contract-sanctuary-ethereum/contracts/mainnet/"
+    #contracts_path = "/data/disk_16t_2/kailun/smart_contract_centralization/test_contracts/ethereum_mainnet/"
+    #copy_sol(mainnet_path, contracts_path,load_passed_contract_set())

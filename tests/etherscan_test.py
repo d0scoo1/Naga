@@ -28,11 +28,11 @@ class EtherscanTest(NagaTest):
                     return sol_path
                 # 如果没有找到 entry contract
             self.not_find_entry_contract += 1
-            self._write_line(self.error_logs,'slither,no contract,'+contract_addr+','+contract_name)
+            self._write_line(self.error_logs,'slither,no contract,'+contract_addr+','+contract_name+","+sol_path)
             return None
         except:
             self.slither_compiler_error += 1
-            self._write_line(self.error_logs,'slither,compiler error,'+contract_addr+','+contract_name)
+            self._write_line(self.error_logs,'slither,compiler error,'+contract_addr+','+contract_name+","+sol_path)
         return None
     
     def run(self):
@@ -89,11 +89,10 @@ class EtherscanTest(NagaTest):
                             self._write_line(self.output_csv,first_line)
                             csv_first_line_is_written = True
                         self._write_line(self.output_csv,line)
-
                         self._write_line(self.output_logs,contract_addr+","+contract_name+","+str(slither_compile_cost)+","+str(naga_analyze_cost))
                 except:
                     self.naga_test_fail += 1
-                    self._write_line(self.error_logs,'naga,detector error,'+contract_addr)
+                    self._write_line(self.error_logs,'naga,detector error,'+contract_addr+","+sol_path)
         
         super().output_test_summary()
     
@@ -182,6 +181,6 @@ def test_erc1155():
     etest.run()
 
 if __name__ == "__main__":
-    #test_erc20()
-    #test_erc721()
+    test_erc20()
+    test_erc721()
     test_erc1155()
