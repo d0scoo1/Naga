@@ -4,15 +4,16 @@ from naga.core.erc import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_
 from slither import Slither
 class Naga():
 
-    def __init__(self,slither:Slither,contract_address=None,contract_name = None, erc_force = None, version = None,ether_balance = 0,txcount = 0, date = '') -> None:
+    def __init__(self,slither:Slither,contract_address=None,contract_name = None, erc_force = None,  **kwargs) -> None:
+        # version = None,ether_balance = 0,txcount = 0, date = ''
         self.slither = slither
-        self.contract_name = contract_name
         self.contract_address = contract_address
+        self.contract_name = contract_name
         self.erc_force = erc_force
-        self.version = version
-        self.ether_balance = ether_balance
-        self.txcount = txcount
-        self.date = date
+        self.version = kwargs.get("version", None)
+        self.ether_balance =  kwargs.get("ether_balance", None)
+        self.txcount = kwargs.get("txcount", None)
+        self.date = kwargs.get("date", None)
         self.entry_contracts = self._get_entry_contracts()
     
         

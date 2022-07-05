@@ -7,7 +7,7 @@ from tqdm import tqdm
 from token_info import token_list as token
 
 base_url = "https://api.etherscan.io/api?module=contract&action=getsourcecode"
-apikey = "&apikey=99111UXSQPVIU93JMZIHC3ZNFN4JQGDJ77" # input your api key, you can get it from https://etherscan.io/myapikey
+apikey = "&apikey=68I2GBGUU79X6YSIMA8KVGIMYSKTS6UDPI" # input your api key, you can get it from https://etherscan.io/myapikey
 
 
 def producer(q,path):
