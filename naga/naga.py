@@ -18,10 +18,9 @@ def nagaInfo(**kwargs):
 
 class Naga():
 
-    def __init__(self,slither:Slither,contract_address=None,contract_name = None) -> None:
+    def __init__(self,slither:Slither,contract_name = None) -> None:
         # version = None,ether_balance = 0,txcount = 0, date = ''
         self.slither = slither
-        self.contract_address = contract_address
         self.contract_name = contract_name
         self._entry_contracts = None
         self.info = dict()

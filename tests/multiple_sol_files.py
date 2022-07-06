@@ -53,9 +53,9 @@ def _get_multiple_files(
     return sol_files, working_dir
 
 
-class CommonSolFile(AbstractPlatform):
+class MultiSolFiles(AbstractPlatform):
     """
-    single file or multiple files
+     multiple files
     """
 
     NAME = "CommonSolFile"
@@ -85,7 +85,7 @@ class CommonSolFile(AbstractPlatform):
         contract_name = kwargs.get("contract_name", None)
         compiler_version = kwargs.get("compiler_version", None)
         optimization_used = kwargs.get("optimization_used", False)
-        #optimize_runs = kwargs.get("optimize_runs", None)
+        optimize_runs = kwargs.get("optimize_runs", None)
         
         compilation_unit = CompilationUnit(crytic_compile, contract_name)
 
@@ -93,10 +93,9 @@ class CommonSolFile(AbstractPlatform):
             compiler=kwargs.get("solc", "solc"),
             version=compiler_version,
             optimized=optimization_used,
-            #optimize_runs=optimize_runs,
+            optimize_runs=optimize_runs,
         )
         #compilation_unit.compiler_version.look_for_installed_version()
-
         solc_standard_json.standalone_compile(filenames, compilation_unit, working_dir=working_dir)
 
     @staticmethod
