@@ -12,20 +12,13 @@ import json
 class ContractExp():
     def __init__(self,contract,nagaObj) -> None:
         self.contract = contract
-        self.contract_address = nagaObj.contract_address
-        self.erc_force = nagaObj.erc_force
-        self.version = nagaObj.version
-        self.ether_balance = nagaObj.ether_balance
-        self.txcount = nagaObj.txcount
-        self.date = nagaObj.date
+        self.naga = nagaObj
         self._is_erc20: Optional[bool] = None
         self._is_erc721: Optional[bool] = None
         self._is_erc1155: Optional[bool] = None
 
     @property
     def is_erc20(self) -> bool:
-        if self.erc_force is not None:
-            return self.erc_force == 'erc20'
 
         if self._is_erc20 is None:
             funcs_sig = [f.full_name for f in self.contract.functions_entry_points]
@@ -37,8 +30,6 @@ class ContractExp():
     
     @property
     def is_erc721(self) -> bool:
-        if self.erc_force is not None:
-            return self.erc_force == 'erc721'
 
         if self._is_erc721 is None:
             funcs_sig = [f.full_name for f in self.contract.functions_entry_points]
@@ -50,9 +41,7 @@ class ContractExp():
 
     @property
     def is_erc1155(self) -> bool:
-        if self.erc_force is not None:
-            return self.erc_force == 'erc1155'
-    
+
         if self._is_erc1155 is None:
             funcs_sig = [f.full_name for f in self.contract.functions_entry_points]
             if len(set(ERC1155_WRITE_FUNCS_SIG) - set(funcs_sig)) == 0:
@@ -112,10 +101,19 @@ class ContractExp():
         self._summary = None
         self._summary_csv = None
 
-    def detect(self):
-        if self.is_erc20: self.detect_erc20()
-        elif self.is_erc721: self.detect_erc721()
-        elif self.is_erc1155: self.detect_erc1155()
+    def detect(self,erc_force = None):
+        self.erc_force = erc_force
+        if erc_force is not None:
+            if erc_force == 'erc20':
+                self.detect_erc20()
+            elif erc_force == 'erc721':
+                self.detect_erc721()
+            elif erc_force == 'erc1155':
+                self.detect_erc1155()
+        else:
+            if self.is_erc20: self.detect_erc20()
+            elif self.is_erc721: self.detect_erc721()
+            elif self.is_erc1155: self.detect_erc1155()
 
     def detect_erc20(self):
         self._before_detect_erc_svars()
@@ -350,8 +348,13 @@ class ContractExp():
             self._summary = self.contract_summary()
         return self._summary
     
-    def summary_json(self):
-        return json.dumps(self.summary,indent=4)
+    def summary_json(self,output_file=None):
+        summary_json = json.dumps(self.summary,indent=4)
+        if output_file is not None:
+            with open(output_file,'w') as f:
+                f.write(summary_json)
+            f.close()
+        return summary_json
     
     def summary_csv(self):
         return self.contract_summary2csv()

@@ -2,22 +2,43 @@
 from naga.core.expansions import ContractExp
 from naga.core.erc import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_WRITE_FUNCS_SIG)
 from slither import Slither
+
+def nagaInfo(**kwargs):
+    info = {}
+    info['contract_address'] = kwargs.get("contract_address", None)
+    info['contract_name'] = kwargs.get("contract_name", None)
+    info['version'] = kwargs.get("version", None)
+    info['entry_sol_file'] = kwargs.get("entry_sol_file", None)
+    info['ether_balance'] = kwargs.get("ether_balance", 0)
+    info['txcount'] = kwargs.get("txcount", 0)
+    info['date'] = kwargs.get("date", None)
+
+    return info
+
+
 class Naga():
 
-    def __init__(self,slither:Slither,contract_address=None,contract_name = None, erc_force = None,  **kwargs) -> None:
+    def __init__(self,slither:Slither,contract_address=None,contract_name = None) -> None:
         # version = None,ether_balance = 0,txcount = 0, date = ''
         self.slither = slither
         self.contract_address = contract_address
         self.contract_name = contract_name
-        self.erc_force = erc_force
-        self.version = kwargs.get("version", None)
-        self.ether_balance =  kwargs.get("ether_balance", None)
-        self.txcount = kwargs.get("txcount", None)
-        self.date = kwargs.get("date", None)
-        self.entry_contracts = self._get_entry_contracts()
-    
-        
-    def _get_entry_contracts(self):
+        self._entry_contracts = None
+        self.info = dict()
+
+    def set_info(self, info):
+        '''
+            Those extra info will be recorded in the summary, so we can use it to debug.
+            contract_address, contract_name,version, entry_sol_file,  ether_balance, txcount, date
+            
+        '''
+        self.info = info
+
+    @property
+    def entry_contracts(self):
+        if self._entry_contracts is not None:
+            return self._entry_contracts
+
         contracts = []
         if self.contract_name is not None:
             contracts =  [ContractExp(c,self) for c in self.slither.get_contract_from_name(self.contract_name)]
@@ -30,7 +51,8 @@ class Naga():
                     calls.append(f[0])
                 contracts_called += calls
             contracts = [ContractExp(c,self) for c in list(set(contracts_derived) - set(contracts_called))]
-        return contracts
+        self._entry_contracts = contracts
+        return self._entry_contracts
 
     def _get_erc_contracts(self):
         
