@@ -20,8 +20,8 @@ logging.getLogger("CryticCompile").level = logging.CRITICAL
 
 ###### common config ######
 etherscan_api_key= '68I2GBGUU79X6YSIMA8KVGIMYSKTS6UDPI'
-solc_dir = '/mnt/c/Users/vk/Desktop/naga/solc/'
-openzeppelin_dir = '/mnt/c/Users/vk/Desktop/naga/openzeppelin-contracts'
+solc_dir = '/mnt/c/Users/vk/Desktop/naga_test/solc/'
+openzeppelin_dir = '/mnt/c/Users/vk/Desktop/naga_test/openzeppelin-contracts'
 
 
 def get_solc_remaps(version='0.8.0',openzeppelin_dir = openzeppelin_dir):
@@ -38,7 +38,6 @@ def get_solc_remaps(version='0.8.0',openzeppelin_dir = openzeppelin_dir):
     if v == 8:
         return "@openzeppelin/=" + openzeppelin_dir + "/openzeppelin-contracts-solc-0.8/"
     return "@openzeppelin/=" + openzeppelin_dir + "/openzeppelin-contracts-solc-0.8/"
-
 
 
 class NagaTest():
@@ -60,7 +59,6 @@ class NagaTest():
         self.max_attemp = 3
         self.time_sleep_second = 0.1
 
-    
     def _local_compile(self):
         if os.path.exists(self.sol_file):
                 self.compile_type = 'sol_file'
@@ -80,7 +78,7 @@ class NagaTest():
             slither = self._local_compile()
         except:
             pass
-
+        
         if slither is not None:
             return slither
 
@@ -128,11 +126,11 @@ class NagaTest():
 
 if __name__ == "__main__":
 
-    address= '0xe0c05ec44775e4ad62cdc2eecdf337aa7a143363'
-    name= 'Mancium'
-    version= '0.8.11'
-    export_dir= '/mnt/c/Users/vk/Desktop/naga/naga_test/token_tracker/erc20'
-    erc_force= 'erc721'
+    address= '0xd09f00d03adb33623b89637717258f4169af71d4'
+    name= 'DeployToken'
+    version= '0.8.9'
+    export_dir= '/mnt/c/Users/vk/Desktop/naga_test/token_tracker/erc1155'
+    erc_force= 'erc1155'
     output_dir = None
     contract = contractInfo(address,name,version,export_dir,erc_force,output_dir)
 
@@ -140,9 +138,8 @@ if __name__ == "__main__":
     #nagaT._etherscan_download_compile()
     nagaT._local_compile()
 
-
     c = nagaT.test()
-    print(c.summary_json())
+    #print(c.summary_json())
     for c in c.label_svars_dict['owners']:
         print(c)
     
