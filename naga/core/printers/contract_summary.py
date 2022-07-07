@@ -193,7 +193,7 @@ def contract_summary(self):
         for svar in f.function.all_state_variables_written():
             summary['l_e_f_rw'][self.svar_rw_dict[svar]] += 1
 
-    info_summary =  self.naga.info # add info to summary
+    info_summary =  self.info # add info to summary
     info_summary.update(summary)
     return info_summary
 
@@ -201,12 +201,12 @@ def contract_summary(self):
 # address, contract_name, is_upgradeable_proxy, is_upgradeable, erc, exist_ownership, exist_paused, owner_written_identities_num, svar_user_read_owner_update, svar_user_write_owner_update,lack_event_functions_num, lack_event_user_function_num, lack_event_owner_function_num,
 def contract_summary2csv(self):
     line = {
-        'contract_address':  self.summary['contract_address'],
-        'contract_name': self.summary['contract_name'],
-        'version': self.version,
-        'ether_balance':self.ether_balance,
-        'txcount':self.txcount,
-        'date' :self.date,
+        'contract_address':  self.summary['address'],
+        'contract_name': self.summary['name'],
+        'version': self.summary['version'],
+        'ether_balance':self.summary['ether_balance'],
+        'txcount':self.summary['txcount'],
+        'date' :self.summary['date'],
         'is_upgradeable_proxy': self.summary['is_upgradeable_proxy'],
         'is_upgradeable': self.summary['is_upgradeable'],
         'erc': self.summary['erc'],

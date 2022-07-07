@@ -52,7 +52,8 @@ def irs_ssa_track(irs, tainted_vars=None):
     else:
         tainted_ir = irs.pop()
 
-    from_function = tainted_ir.node.function
+    from_functions = set()
+    from_functions.add(tainted_ir.function.full_name)
     while irs:
         ir = irs.pop()
         if isinstance(ir,NO_LEFT_VALUE_OPERATIONS): #,PhiCallback,SolidityCall,LibraryCall,LowLevelCall,HighLevelCall
@@ -65,7 +66,7 @@ def irs_ssa_track(irs, tainted_vars=None):
         rval = []
         if isinstance(ir, InternalCall): # 如果是 internalcall
             #print("----internalcall",ir,from_function)
-            rval = internalCall_track(ir,from_function) # internalCall_track 返回的是一个 [[],[]] 需要转换为 []
+            rval = internalCall_track(ir,from_functions) # internalCall_track 返回的是一个 [[],[]] 需要转换为 []
         else:
             rval = ir.read
 
@@ -85,7 +86,7 @@ def irs_ssa_track(irs, tainted_vars=None):
     return tainted_vars
 
 
-def internalCall_track(t_ir,from_function=None):
+def internalCall_track(t_ir,from_functions=set()):
     """
         from_function: 防止循环调用
     """
@@ -95,7 +96,7 @@ def internalCall_track(t_ir,from_function=None):
     index = 0
     for ir in irs:
         index += 1
-        if isinstance(ir, Return) and ir.function != from_function:
+        if isinstance(ir, Return) and ir.function.full_name not in from_functions:
             rvals += sum(irs_ssa_track(irs[0:index]),[])
     if rvals != []:
         return rvals
@@ -119,7 +120,7 @@ def internalCall_track(t_ir,from_function=None):
                 index += 1
                 if isinstance(ir,NO_LEFT_VALUE_OPERATIONS):
                     continue
-                if ir.lvalue is not None and ir.lvalue.non_ssa_version == ret_val and ir.function != from_function:
+                if ir.lvalue is not None and ir.lvalue.non_ssa_version == ret_val and ir.function.full_name not in from_functions:
                     rvals += sum(irs_ssa_track(irs[0:index]),[])
 
     return rvals

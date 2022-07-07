@@ -3,17 +3,6 @@ from naga.core.expansions import ContractExp
 from naga.core.erc import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_WRITE_FUNCS_SIG)
 from slither import Slither
 
-def nagaInfo(**kwargs):
-    info = {}
-    info['contract_address'] = kwargs.get("contract_address", None)
-    info['contract_name'] = kwargs.get("contract_name", None)
-    info['version'] = kwargs.get("version", None)
-    info['entry_sol_file'] = kwargs.get("entry_sol_file", None)
-    info['ether_balance'] = kwargs.get("ether_balance", 0)
-    info['txcount'] = kwargs.get("txcount", 0)
-    info['date'] = kwargs.get("date", None)
-
-    return info
 
 
 class Naga():
@@ -23,15 +12,7 @@ class Naga():
         self.slither = slither
         self.contract_name = contract_name
         self._entry_contracts = None
-        self.info = dict()
 
-    def set_info(self, info):
-        '''
-            Those extra info will be recorded in the summary, so we can use it to debug.
-            contract_address, contract_name,version, entry_sol_file,  ether_balance, txcount, date
-            
-        '''
-        self.info = info
 
     @property
     def entry_contracts(self):
