@@ -126,11 +126,11 @@ class NagaTest():
 
 if __name__ == "__main__":
 
-    address= '0xd09f00d03adb33623b89637717258f4169af71d4'
-    name= 'DeployToken'
-    version= '0.8.9'
-    export_dir= '/mnt/c/Users/vk/Desktop/naga_test/token_tracker/erc1155'
-    erc_force= 'erc1155'
+    address= '0xaeb8121b89625576fd85bc460a1e2cdb2b7ee7d7'
+    name= 'CollectionContract'
+    version= '0.8.11'
+    export_dir= '/mnt/c/Users/vk/Desktop/naga_test/token_tracker/erc721'
+    erc_force= 'erc721'
     output_dir = None
     contract = contractInfo(address,name,version,export_dir,erc_force,output_dir)
 
@@ -143,4 +143,4 @@ if __name__ == "__main__":
     for c in c.label_svars_dict['owners']:
         print(c)
     
-    #print(nagaT.compile_type)
+    print(nagaT.compile_type)

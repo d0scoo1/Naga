@@ -19,7 +19,7 @@ def producer(q,contracts):
         time.sleep(0.20)
 
 
-def consumer(q,):
+def consumer(q,tested_contracts_path):
     '''
         Consumer get the contract from producer, and run naga_test
     '''
@@ -31,15 +31,24 @@ def consumer(q,):
                 nagaT.test()
             except:
                 print('NAGA Error:',nagaT.sol_dir,nagaT.sol_file)
+
+            # record this contract has tested.
+            with open(tested_contracts_path,'a') as f:
+                f.write(c['address']+'\n')
         else:
-            time.sleep(0.1)
             break
 
 
-def _load_contractsJson(contractsJson_path,export_dir,erc_force,output_dir):
-    contracts_tested = set(os.listdir(output_dir))
+def _load_contractsJson(contractsJson_path,export_dir,erc_force,output_dir,tested_contracts_path):
+
+    contracts_tested = set()
+    with open(tested_contracts_path,'r') as fr:
+        line = fr.readline()
+        while line != '':
+            contracts_tested.add(line.strip())
+            line = fr.readline()
+    fr.close()
     print('contracts_tested',len(contracts_tested))
-    #contracts_tested = set()
 
     contractsJson = dict()
     with open(contractsJson_path, 'r') as fr:
@@ -71,8 +80,15 @@ def _load_contractsJson(contractsJson_path,export_dir,erc_force,output_dir):
         contracts.append(cInfo)
     return contracts
 
-def _load_mainnet_json(contractsJson_path,export_dir,erc_force,output_dir):
-    contracts_tested = set(os.listdir(output_dir))
+def _load_mainnet_json(contractsJson_path,export_dir,erc_force,output_dir,tested_contracts_path):
+    # mainnet contracts have a lot of error, so we use tested_contracts to record the contract that had been tested.
+    contracts_tested = set()
+    with open(tested_contracts_path,'r') as fr:
+        line = fr.readline()
+        while line != '':
+            contracts_tested.add(line.strip())
+            line = fr.readline()
+    fr.close()
     print('contracts_tested',len(contracts_tested))
 
     contractsJson = dict()
@@ -83,6 +99,9 @@ def _load_mainnet_json(contractsJson_path,export_dir,erc_force,output_dir):
             contractsJson[c['address']] = c
             line = fr.readline()
     fr.close()
+
+    print('contractsJson',len(contractsJson))
+
 
     contracts = []
     for c in contractsJson.values():
@@ -103,14 +122,20 @@ def run(contractsJson_path,export_dir,erc_force,output_dir,process_num = 10):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
+    tested_contracts_path = os.path.join(export_dir,'tested_contracts.txt')
+    
+    if not os.path.exists(tested_contracts_path):
+        with open(tested_contracts_path,'w') as f:
+            pass
+
     if erc_force is not None:
-        contracts = _load_contractsJson(contractsJson_path,export_dir,erc_force,output_dir)
+        contracts = _load_contractsJson(contractsJson_path,export_dir,erc_force,output_dir,tested_contracts_path)
     else:
-        contracts = _load_mainnet_json(contractsJson_path,export_dir,erc_force,output_dir)
+        contracts = _load_mainnet_json(contractsJson_path,export_dir,erc_force,output_dir,tested_contracts_path)
 
     q = Queue(process_num)
     p = Process(target=producer,args=(q,contracts,))
-    consumers = [Process(target=consumer,args=(q,)) for i in range(process_num)]
+    consumers = [Process(target=consumer,args=(q,tested_contracts_path,)) for i in range(process_num)]
 
     tasks = [p] + consumers
     [t.start() for t in tasks]
