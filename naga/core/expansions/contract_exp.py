@@ -8,24 +8,6 @@ from naga.core.erc import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_
 
 import json
 
-
-def contractInfo(address,name,version,export_dir,erc_force,output_dir = None):
-    info = {}
-    info['address'] = address
-    info['name'] = name
-    info['version'] =version
-    info['export_dir'] = export_dir
-    info['erc_force'] = erc_force
-    info['output_dir'] = output_dir
-    info['entry_sol_file'] = None
-    info['ether_balance'] = 0
-    info['txcount'] = 0
-    info['date'] = 0
-    info['naga_test_cost'] =  0
-    info['slither_compile_cost'] = 0
-    return info
-
-
 class ContractExp():
     def __init__(self,contract,nagaObj) -> None:
         self.contract = contract

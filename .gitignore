@@ -4,4 +4,4 @@ tests/test.py
 tests/old/*
 crytic-export/*
 analysis/*
-
+tools/*

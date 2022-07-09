@@ -7,37 +7,30 @@ import json
 import os
 from multiprocessing import Process,Queue
 from naga_test import NagaTest
-from naga.core.expansions import contractInfo
 
 def producer(q,contracts):
-    '''
-        Producer offers the contracts to consumer
-        Etherscan free API limit is 5 requests per second
-    '''
     for c in tqdm(contracts):
         q.put(c)
-        time.sleep(0.20)
 
 
 def consumer(q,tested_contracts_path):
     '''
-        Consumer get the contract from producer, and run naga_test
+        Consumer get contracts from the producer, and run naga_test
     '''
     while 1:
         c = q.get()
         if c:
             nagaT = NagaTest(c)
             try:
-                nagaT.test()
+                nagaT.local_test()
             except:
                 print('NAGA Error:',nagaT.sol_dir,nagaT.sol_file)
 
-            # record this contract has tested.
+            # Record the contract has been tested.
             with open(tested_contracts_path,'a') as f:
                 f.write(c['address']+'\n')
         else:
             break
-
 
 def _load_contractsJson(contractsJson_path,export_dir,erc_force,output_dir,tested_contracts_path):
 
@@ -60,6 +53,7 @@ def _load_contractsJson(contractsJson_path,export_dir,erc_force,output_dir,teste
     fr.close()
 
     # Use implementation to replace the proxy and remove the contract that has been tested
+    no_impl_contracts = []
     contracts = []
     for c in contractsJson.values():
         proxy_address = ''
@@ -68,53 +62,30 @@ def _load_contractsJson(contractsJson_path,export_dir,erc_force,output_dir,teste
             if c['Implementation'] in contractsJson:
                 c = contractsJson[c['Implementation']]
             else:
-                print('Implementation contract not found:',c['address'],c['Implementation'])
+                no_impl_contracts.append(c)
                 continue
         if c['address'] in contracts_tested:
             continue
         if c['version'] == 'noSolc' or c['version'].startswith('0.4.'):
             continue
-
-        cInfo = contractInfo(c['address'],c['ContractName'],c['version'],export_dir,erc_force,output_dir)
-        cInfo['proxy_address'] = proxy_address
-        contracts.append(cInfo)
+        
+        contractInfo ={
+            'address': c['address'],
+            'name': c['ContractName'],
+            'version': c['version'],
+            'entry_sol_file': "",
+            'slither_compile_cost': 0,
+            'naga_test_cost': 0,
+            'erc_force':erc_force,
+            'proxy_address': proxy_address,
+            'export_dir':export_dir,
+            'output_file':os.path.join(output_dir,c['address'])
+        }
+        contracts.append(contractInfo)
+    
+    print('no_impl_contracts',len(no_impl_contracts))
     return contracts
 
-def _load_mainnet_json(contractsJson_path,export_dir,erc_force,output_dir,tested_contracts_path):
-    # mainnet contracts have a lot of error, so we use tested_contracts to record the contract that had been tested.
-    contracts_tested = set()
-    with open(tested_contracts_path,'r') as fr:
-        line = fr.readline()
-        while line != '':
-            contracts_tested.add(line.strip())
-            line = fr.readline()
-    fr.close()
-    print('contracts_tested',len(contracts_tested))
-
-    contractsJson = dict()
-    with open(contractsJson_path, 'r') as fr:
-        line = fr.readline()
-        while line != '':
-            c = json.loads(line)
-            contractsJson[c['address']] = c
-            line = fr.readline()
-    fr.close()
-
-    print('contractsJson',len(contractsJson))
-
-
-    contracts = []
-    for c in contractsJson.values():
-        if c['address'] in contracts_tested:
-            continue
-        if c['compiler'].startswith('0.4.'): #c['compiler'] == 'noSolc' or 
-            continue
-        cInfo = contractInfo(c['address'],c['name'],c['compiler'],export_dir,erc_force,output_dir)
-        cInfo['ether_balance'] = c['balance']
-        cInfo['txcount'] = c['txcount']
-        cInfo['date'] = c['date']
-        contracts.append(cInfo)
-    return contracts
 
 
 def run(contractsJson_path,export_dir,erc_force,output_dir,process_num = 10):
@@ -122,16 +93,13 @@ def run(contractsJson_path,export_dir,erc_force,output_dir,process_num = 10):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    tested_contracts_path = os.path.join(export_dir,'tested_contracts.txt')
+    tested_contracts_path = os.path.join(export_dir,'naga_tested.txt')
     
     if not os.path.exists(tested_contracts_path):
         with open(tested_contracts_path,'w') as f:
             pass
 
-    if erc_force is not None:
-        contracts = _load_contractsJson(contractsJson_path,export_dir,erc_force,output_dir,tested_contracts_path)
-    else:
-        contracts = _load_mainnet_json(contractsJson_path,export_dir,erc_force,output_dir,tested_contracts_path)
+    contracts = _load_contractsJson(contractsJson_path,export_dir,erc_force,output_dir,tested_contracts_path)
 
     q = Queue(process_num)
     p = Process(target=producer,args=(q,contracts,))
@@ -143,48 +111,49 @@ def run(contractsJson_path,export_dir,erc_force,output_dir,process_num = 10):
     for i in range(process_num): # If the queue is not empty, we should put a None to tell the consumer to stop
         q.put(None)
 
-def run_erc20():
-    contractsJson_path = "/mnt/d/onedrive/sdu/Research/centralization_in_blackchain/naga/tests/contract_json/contracts_20.json"
+root_path = '/mnt/c/Users/vk/Desktop/naga_test'
 
-    export_dir = '/mnt/c/Users/vk/Desktop/naga_test/token_tracker/erc20'
+def erc20_start():
     erc_force  = 'erc20'
-    output_dir = os.path.join(export_dir,'results')
-
+    erc_base_path = os.path.join(root_path,'token_tracker',erc_force)
+    contractsJson_path = os.path.join(erc_base_path,'contracts.json')
+    export_dir = os.path.join(erc_base_path,'etherscan-contracts')
+    output_dir = os.path.join(erc_base_path,'naga_results')
     run(contractsJson_path,export_dir,erc_force,output_dir)
 
-def run_erc721():
-    contractsJson_path = "/mnt/d/onedrive/sdu/Research/centralization_in_blackchain/naga/tests/contract_json/contracts_721.json"
-
-    export_dir = '/mnt/c/Users/vk/Desktop/naga_test/token_tracker/erc721'
+def erc721_start():
     erc_force  = 'erc721'
-    output_dir = os.path.join(export_dir,'results')
-
+    erc_base_path = os.path.join(root_path,'token_tracker',erc_force)
+    contractsJson_path = os.path.join(erc_base_path,'contracts.json')
+    export_dir = os.path.join(erc_base_path,'etherscan-contracts')
+    output_dir = os.path.join(erc_base_path,'naga_results')
     run(contractsJson_path,export_dir,erc_force,output_dir)
 
-def run_erc1155():
-    #Implementation: 0x142fd5b9d67721efda3a5e2e9be47a96c9b724a4 是 1529 个合约的实现
-    # erc 1155
-
-    contractsJson_path = "/mnt/d/onedrive/sdu/Research/centralization_in_blackchain/naga/tests/contract_json/contracts_1155.json"
-
-    export_dir = '/mnt/c/Users/vk/Desktop/naga_test/token_tracker/erc1155'
+def erc1155_start():
     erc_force  = 'erc1155'
-    output_dir = os.path.join(export_dir,'results')
-
+    erc_base_path = os.path.join(root_path,'token_tracker',erc_force)
+    contractsJson_path = os.path.join(erc_base_path,'contracts.json')
+    export_dir = os.path.join(erc_base_path,'etherscan-contracts')
+    output_dir = os.path.join(erc_base_path,'naga_results')
     run(contractsJson_path,export_dir,erc_force,output_dir)
 
-def run_mainnet():
-
-    contractsJson_path = "/mnt/d/onedrive/sdu/Research/centralization_in_blackchain/naga/tests/contract_json/contracts_mainnet.json"
-
-    export_dir = '/mnt/c/Users/vk/Desktop/naga_test/mainnet'
+def mainnet_start():
     erc_force  = None
-    output_dir = os.path.join(export_dir,'results')
-
+    contractsJson_path = os.path.join(root_path,'contracts.json')
+    export_dir = os.path.join(root_path,'etherscan-contracts')
+    output_dir = os.path.join(root_path,'naga_results')
     run(contractsJson_path,export_dir,erc_force,output_dir)
+
+
+def mark():
+    rs1 = os.listdir("/mnt/c/Users/vk/Desktop/naga_test/mainnet/results")
+    rs2 = os.listdir("/mnt/c/Users/vk/Desktop/naga_test/mainnet/etherscan-contracts")
+    with open('/mnt/c/Users/vk/Desktop/naga_test/mainnet/tested_contracts.txt','w') as f:
+        pass
+    for r in tqdm(list(set(rs1 + rs2))):
+        with open('/mnt/c/Users/vk/Desktop/naga_test/mainnet/tested_contracts.txt','a') as f:
+            f.write(r[:42]+'\n')
+
 
 if __name__ == "__main__":
-    #run_erc20()
-    #run_erc1155()
-    #run_erc721()
-    run_mainnet()
+    erc20_start()
