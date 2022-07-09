@@ -252,10 +252,9 @@ def consumer(q,contractDownloader):
         if c:
             try:
                 contractDownloader.safe_save(c)
-            except URLError:
-                break
             except Exception as e:
                 print(e)
+                break
         else:
             break
 
@@ -303,10 +302,8 @@ def start(contracts_index_path,export_dir,process_num = 8):
     run(contracts,CDer,process_num)
 
     # Request the implementation
-    contracts_implementation = set(_load_implementations(CDer.contract_json_record_path)) - contracts_requested - contracts
-
     print('Implementations requesting...')
-    
+    contracts_implementation = set(_load_implementations(CDer.contract_json_record_path)) - contracts_requested - contracts
     run(contracts_implementation,CDer,process_num)
 
     print('Finish')
