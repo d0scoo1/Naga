@@ -112,7 +112,6 @@ def run(contractsJson_path,export_dir,erc_force,output_dir,process_num = 10):
         q.put(None)
 
 root_path = '/mnt/c/Users/vk/Desktop/naga_test'
-
 def erc20_start():
     erc_force  = 'erc20'
     erc_base_path = os.path.join(root_path,'token_tracker',erc_force)

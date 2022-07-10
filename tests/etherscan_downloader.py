@@ -80,11 +80,11 @@ def _handle_multiple_files(
     filtered_paths: List[str] = []
     for filename, source_code in source_codes.items():
         path_filename = Path(filename)
-        if 'https://' or 'http://' in filename:
+        if filename.startswith("/") or filename.startswith("http"):
             if "contracts" in path_filename.parts and not filename.startswith("@"):
                 path_filename = Path(*path_filename.parts[path_filename.parts.index("contracts") :])
             else:
-                filename = filename.split("/")[-1]
+                path_filename = Path(filename.split("/")[-1])
         filtered_paths.append(str(path_filename))
         path_filename = Path(directory, path_filename)
 
@@ -130,10 +130,9 @@ class ContractDownloader():
         
 
     def save(self, addr: str):
-        info = self._request_info(addr)
-        result = self._request_paser(addr, info)
-        self._save_request_raw(addr, info)
-        return result
+        result = self._request_info(addr)
+        f_result = self._result_paser(addr, result)
+        return f_result
     
     def safe_save(self, addr: str):
         try:
@@ -157,9 +156,7 @@ class ContractDownloader():
         url = self.etherscan_url + f"&address={addr}"
         with urllib.request.urlopen(url) as response:
             html = response.read()
-        return json.loads(html.decode('utf-8'))
-
-    def _request_paser(self,addr,info):
+        info = json.loads(html.decode('utf-8'))
 
         if "result" in info and info["result"] == "Max rate limit reached":
             raise RateLimitExceeded("Etherscan API rate limit exceeded") #
@@ -172,15 +169,18 @@ class ContractDownloader():
 
         if "result" not in info:
             raise NoSourceCode("Contract has no public source code")
+        
+        if info["result"][0]["SourceCode"] == "":
+            raise NoSourceCode("Contract has no public source code")
+        
+        self._save_request_raw(addr, info)
+        return info["result"][0]
 
-        result = info["result"][0]
+    def _result_paser(self,addr,result):
         assert isinstance(result["SourceCode"], str)
         assert isinstance(result["ContractName"], str)
         source_code = result["SourceCode"]
         contract_name = result["ContractName"]
-
-        if source_code == "":
-            raise NoSourceCode("Contract has no public source code")
         
         try:
             # etherscan might return an object with two curly braces, {{ content }}
@@ -201,7 +201,6 @@ class ContractDownloader():
                 ]
 
         # Return the contracts.json
-
         del result['ABI']
         del result['ConstructorArguments']
         #del r['LicenseType']
@@ -214,7 +213,7 @@ class ContractDownloader():
         result['compiler'] = re.findall(r"\d+\.\d+\.\d+", _convert_version(result["CompilerVersion"]))[0]
 
         return result
-    
+
     def _save_request_raw(self,addr,info):
         # Save the request result in the raw directory
         with open(os.path.join(self.raw_dir, addr), 'w') as fw:
@@ -254,7 +253,8 @@ def consumer(q,contractDownloader):
                 contractDownloader.safe_save(c)
             except Exception as e:
                 print(e)
-                break
+                if isinstance(e, URLError):
+                    return
         else:
             break
 
@@ -262,8 +262,13 @@ def _load_contractsJson(contractsJson_path):
     contracts = []
     with open(contractsJson_path, 'r') as fr:
         line = fr.readline()
+        index = 0
         while line != '':
-            c = json.loads(line)
+            index += 1
+            try:
+                c = json.loads(line)
+            except Exception as e:
+                print(index)
             contracts.append(c['address'])
             line = fr.readline()
     fr.close()
@@ -309,6 +314,7 @@ def start(contracts_index_path,export_dir,process_num = 8):
     print('Finish')
     
 def run(contracts,contractDownloader,process_num = 5):
+
     q = Queue(process_num)
     p = Process(target=producer,args=(q,contracts,))
     consumers = [Process(target=consumer,args=(q,contractDownloader,)) for i in range(process_num)]
@@ -351,6 +357,6 @@ def test_one():
 
 if __name__ == "__main__":
     #erc20_start()
-    #erc721_start()
+    erc721_start()
     #erc1155_start()
-    mainnet_start()
+    #mainnet_start()
