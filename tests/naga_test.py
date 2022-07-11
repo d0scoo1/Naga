@@ -1,193 +1,149 @@
 import sys
 sys.path.append(r"/mnt/d/onedrive/sdu/Research/centralization_in_blackchain/naga")
-
+from slither_compiler import SlitherCompiler
 import os
-from slither import Slither
-from naga.naga import Naga
-from naga.core.expansions import ContractExp
-
-
-from crytic_compile import CryticCompile
-#from crytic_compile.platform.all_platforms import Etherscan,Solc
-from test_platform.multiple_sol_files import MultiSolFiles
-from test_platform.etherscan import Etherscan # crytic_compile.platform.Etherscan has bug
-from crytic_compile.platform.exceptions import InvalidCompilation
-
 import time
-import logging
-
-logging.getLogger("CryticCompile").level = logging.CRITICAL
-
-###### common config ######
-etherscan_api_key= '68I2GBGUU79X6YSIMA8KVGIMYSKTS6UDPI'
-solc_dir = '/mnt/c/Users/vk/Desktop/naga_test/solc/'
-openzeppelin_dir = '/mnt/c/Users/vk/Desktop/naga_test/openzeppelin-contracts'
-
-def get_solc_remaps(version='0.8.0',openzeppelin_dir = openzeppelin_dir):
-    '''
-    get the remaps for a given solc version
-    '''
-    v = int(version.split('.')[1])
-    if v == 5:
-        return "@openzeppelin/=" + openzeppelin_dir + "/openzeppelin-contracts-solc-0.5/"
-    if v == 6:
-        return "@openzeppelin/=" + openzeppelin_dir + "/openzeppelin-contracts-solc-0.6/"
-    if v == 7:
-        return "@openzeppelin/=" + openzeppelin_dir + "/openzeppelin-contracts-solc-0.7/"
-    if v == 8:
-        return "@openzeppelin/=" + openzeppelin_dir + "/openzeppelin-contracts-solc-0.8/"
-    return "@openzeppelin/=" + openzeppelin_dir + "/openzeppelin-contracts-solc-0.8/"
-
-def contractInfo(address,name,version,export_dir,erc_force,output_dir = None):
-    info = {}
-    info['address'] = address
-    info['name'] = name
-    info['version'] =version
-    info['export_dir'] = export_dir
-    info['erc_force'] = erc_force
-    info['output_dir'] = output_dir
-    info['entry_sol_file'] = None
-    info['ether_balance'] = 0
-    info['txcount'] = 0
-    info['date'] = 0
-    info['naga_test_cost'] =  0
-    info['slither_compile_cost'] = 0
-    return info
+from naga.naga import Naga
 
 class NagaTest():
-    def __init__(self,contract) -> None:
+    def __init__(self,contract,input_dir,output_dir) -> None:
         self.contract = contract
-        self.contract_address = contract['address']
-        self.contract_name = contract['name']
-        self.contract_version = contract['version']
-        self.contract_export_dir = contract['export_dir']
-        self.erc_force = contract['erc_force']
-        self.output_file = contract['output_file']
+        self.input_dir = input_dir
+        self.output_dir = output_dir
+        self.contracts_dir = os.path.join(input_dir,'contracts')
+        self.result_path = os.path.join(output_dir,'results')
 
-        self.compiler = solc_dir +'solc-'+ self.contract_version
-        self.sol_dir = os.path.join(self.contract_export_dir, self.contract_address + '_' +self.contract_name)
-        self.sol_file = self.sol_dir + '.sol'
-
-        #self.max_attemp = 3
-        #self.time_sleep_second = 0.1
-
-    def local_compile(self):
-        if os.path.exists(self.sol_file):
-                return Slither(self.sol_file,solc = self.compiler,disable_solc_warnings = True,solc_remaps = get_solc_remaps(self.contract_version))
-        if os.path.exists(self.sol_dir):
-            return Slither(CryticCompile(MultiSolFiles(self.sol_dir,solc_remaps = get_solc_remaps(self.contract_version)),solc = self.compiler,compiler_version=self.contract_version),disable_solc_warnings = True)
-
-    def etherscan_download_compile(self):
-        return Slither(CryticCompile(Etherscan(self.contract_address,disable_solc_warnings = True),solc = self.compiler,solc_remaps = get_solc_remaps(self.contract_version),etherscan_only_source_code = True,etherscan_api_key=etherscan_api_key,export_dir =self.contract_export_dir))
-
+    def get_slither(self,):
+        sol_dir = os.path.join(self.contracts_dir, self.contract['address'] + '_' + self.contract['name'])
+        if os.path.exists(sol_dir):
+            return SlitherCompiler().multi_compile(sol_dir,self.contract['compiler'])
+        sol_file = sol_dir +'.sol'
+        if os.path.exists(sol_file):
+            return SlitherCompiler().single_compile(sol_file,self.contract['compiler'])
+        
+        #return SlitherCompiler().etherscan_download_compile(self.contract['address'],self.contract['name'],self.contract['compiler'],contracts_dir)
+        
     def local_test(self):
+
         try:
             s_start_time = time.time()
-            slither = self.local_compile()
+            slither = self.get_slither()
             s_end_time = time.time()
             self.contract['slither_compile_cost'] = s_end_time - s_start_time
         except:
+            with open(os.path.join(self.input_dir,'errors',self.contract['address']+'_slither'),'w') as f:
+                pass
             return
-        try:
-            n_start_time = time.time()
-            naga = Naga(slither,contract_name= self.contract_name)
-            
-            if len(naga.entry_contracts) == 0: return
-            naga_contract = naga.entry_contracts[0]
-            
-            if self.erc_force != None:
-                naga_contract.detect(erc_force= self.erc_force)
-            elif naga_contract.is_erc:
-                naga_contract.detect()
-            else:
-                return
-            n_end_time = time.time()
-            self.contract['naga_test_cost'] = n_end_time - n_start_time
-        except:
-            return
-        
-        export_dir_len = len(self.contract_export_dir) + 1
 
-        self.contract['entry_sol_file'] = naga_contract.contract.source_mapping['filename_used'][export_dir_len:]# If a contract has multiple solidity files, we should find the entry contract
-
-        contractInfo = self.contract
-        del contractInfo['export_dir']
-        del contractInfo['output_file']
-        naga_contract.set_info(contractInfo)
-        naga_contract.summary_json(self.output_file)
-        return naga_contract
-
-
-    """
-    def get_slither(self,attemp = 0):
-        slither = None
-        try:
-            slither = self.local_compile()
-        except:
-            pass
-        
-        if slither is not None:
-            return slither
-
-        try:
-            return self.etherscan_download_compile()
-        except: # : If throw InvalidCompilation, we try again
-            if attemp < self.max_attemp:
-                time.sleep(self.time_sleep_second)
-                return self.get_slither(attemp +1)
-            return None
-    
-    def test(self):
-
-        slither = self.get_slither()
-
-        if slither is None:
-            return
-        
-        etherscan_contracts = os.path.join(self.contract_export_dir,"etherscan-contracts")
-        export_dir_len = len(etherscan_contracts) + 1
-
-        naga = Naga(slither,contract_name= self.contract_name)
-        if len(naga.entry_contracts) == 0: return None
+        n_start_time = time.time()
+        naga = Naga(slither,contract_name= self.contract['name'])
+        if len(naga.entry_contracts) == 0: return
         naga_contract = naga.entry_contracts[0]
-
-
-        if self.erc_force != None:
-            naga_contract.detect(erc_force= self.erc_force)
+        if self.contract['erc_force'] != None:
+            naga_contract.detect(erc_force= self.contract['erc_force'])
         elif naga_contract.is_erc:
             naga_contract.detect()
         else:
-            return None
+            return
+        n_end_time = time.time()
+        self.contract['naga_test_cost'] = n_end_time - n_start_time
+        self.contract['entry_sol_file'] = naga_contract.contract.source_mapping['filename_used'][len(self.contracts_dir)+1:]
 
-        self.contract['entry_sol_file']= naga_contract.contract.source_mapping['filename_used'][export_dir_len:]# If a contract has multiple solidity files, we should find the entry contract
         naga_contract.set_info(self.contract)
-
-        output_file = None
-        if self.output_dir is not None:
-            if not os.path.exists(self.output_dir):
-                os.makedirs(self.output_dir)
-            output_file = os.path.join(self.output_dir,self.contract_address)
-        naga_contract.summary_json(output_file)
+        naga_contract.summary_json(os.path.join(self.result_path,self.contract['address']))
         return naga_contract
-    """
+
+from multiprocessing import Process,Queue
+from tqdm import tqdm
+import json
+
+def producer(q,contracts):
+    for c in tqdm(contracts):
+        q.put(c)
+
+
+def consumer(q,input_dir,output_dir):
+    while 1:
+        c = q.get()
+        if c:
+            nagaT = NagaTest(c,input_dir,output_dir)
+            try:
+                nagaT.local_test()
+            except:
+                with open(os.path.join(input_dir,'errors',c['address']+'_naga'),'w') as f:
+                    pass
+        else:
+            return
+
+def _load_contracts(input_dir,output_dir,erc_force = None):
+    # load error contracts & tested contracts
+    contracts_tested = os.listdir(os.path.join(output_dir,'results'))
+    for c in os.listdir(os.path.join(output_dir,'errors')):
+        contracts_tested.append(c[:42])
+    contracts_tested = set(contracts_tested)
+
+    contracts_info = []
+    with open(os.path.join(input_dir,'contracts_info.json'), 'r') as fr:
+        line = fr.readline()
+        while line != '':
+            contracts_info.append(json.loads(line))
+            line = fr.readline()
+
+    contracts = []
+    for c in contracts_info:
+        if c['address'] in contracts_tested or int(c['compiler'][2]) <= 4:
+            continue
+        contractInfo ={
+            'address': c['address'],
+            'name': c['name'],
+            'compiler': c['compiler'],
+            'entry_sol_file': "",
+            'slither_compile_cost': 0,
+            'naga_test_cost': 0,
+            'erc_force':erc_force,
+            'proxy': c['Proxy'],
+            'implementation':c['Implementation'],
+        }
+        contracts.append(contractInfo)
+    return contracts
+
+def _count_errors(output_dir):
+    errors = []
+    slither_errors = []
+    for c in os.listdir(os.path.join(output_dir,'errors')):
+        if c[43:] == 'naga': errors.append(c[:42])
+        else: slither_errors.append(c[:42])
+    print('naga errors:',len(errors))
+    print('slither errors:',len(slither_errors))
+
+def run(input_dir,output_dir, erc_force = None, process_num = 4):
+    print('input_dir:',input_dir)
+    print('output_dir:',output_dir)
+    naga_results_dir = os.path.join(output_dir,'results')
+    errors_dir = os.path.join(output_dir,'errors')
+    if not os.path.exists(naga_results_dir): os.makedirs(naga_results_dir)
+    if not os.path.exists(errors_dir): os.makedirs(errors_dir)
+
+    contracts = _load_contracts(input_dir,output_dir,erc_force)
+
+    q = Queue(process_num)
+    p = Process(target=producer,args=(q,contracts,))
+    consumers = [Process(target=consumer,args=(q,input_dir,output_dir,)) for i in range(process_num)]
+
+    tasks = [p] + consumers
+    [t.start() for t in tasks]
+    p.join()
+    for i in range(process_num): q.put(None)
+
+    _count_errors(output_dir)
+
+
+root_path = '/mnt/c/Users/vk/Desktop/naga_test'
+def erc20_start():
+    erc_force  = 'erc20'
+    erc_base_path = os.path.join(root_path,'token_tracker',erc_force)
+    run(erc_base_path,erc_base_path+'/naga',erc_force)
 
 if __name__ == "__main__":
+    erc20_start()
 
-    address= '0xaeb8121b89625576fd85bc460a1e2cdb2b7ee7d7'
-    name= 'CollectionContract'
-    version= '0.8.11'
-    export_dir= '/mnt/c/Users/vk/Desktop/naga_test/token_tracker/erc721'
-    erc_force= 'erc721'
-    output_dir = None
-    contract = contractInfo(address,name,version,export_dir,erc_force,output_dir)
-
-    nagaT = NagaTest(contract)
-    #nagaT.etherscan_download_compile()
-    nagaT.local_compile()
-
-    c = nagaT.test()
-    #print(c.summary_json())
-    for c in c.label_svars_dict['owners']:
-        print(c)
-    
-    print(nagaT.compile_type)

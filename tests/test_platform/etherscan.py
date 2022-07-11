@@ -148,11 +148,11 @@ def _handle_multiple_files(
     filtered_paths: List[str] = []
     for filename, source_code in source_codes.items():
         path_filename = Path(filename)
-        if 'https://' or 'http://' in filename:
+        if filename.startswith("/") or filename.startswith("http"):
             if "contracts" in path_filename.parts and not filename.startswith("@"):
-            #    print(filename)
                 path_filename = Path(*path_filename.parts[path_filename.parts.index("contracts") :])
-            #    print(path_filename)
+            else:
+                path_filename = Path(filename.split("/")[-1])
         filtered_paths.append(str(path_filename))
         path_filename = Path(directory, path_filename)
 
