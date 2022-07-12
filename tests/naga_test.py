@@ -147,6 +147,6 @@ def start(erc_force):
 if __name__ == "__main__":
     #start('erc20')
     #start('erc721')
-    #start('erc1155')
+    start('erc1155')
     #start('mainnet')
     pass

@@ -84,8 +84,7 @@ class ContractExp():
 
     from naga.core.detectors import (
         detect_owners_bwList,detect_paused,
-        detect_erc20_state_vars,detect_erc721_state_vars,detect_erc1155_state_vars,
-        detect_unfair_settings,detect_lack_event_functions,)
+        detect_erc20_state_vars,detect_erc721_state_vars,detect_erc1155_state_vars,detect_lack_event_functions,)
 
     def _before_detect_erc_svars(self):
         self.label_svars_dict = dict() # Mapping from label to state variables
