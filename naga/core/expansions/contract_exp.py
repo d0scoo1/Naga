@@ -19,9 +19,7 @@ class ContractExp():
 
     def set_info(self, info):
         '''
-            Those extra info will be recorded in the summary, so we can use it to debug.
-            contract_address, contract_name,version, entry_sol_file,  ether_balance, txcount, date
-            
+        Those extra info will be recorded at the head of summary.
         '''
         self.info = info
     
@@ -63,7 +61,7 @@ class ContractExp():
         if self.is_erc20: return 'erc20'
         if self.is_erc721: return 'erc721'
         if self.is_erc1155: return 'erc1155'
-        return 'none'
+        return None
     
     @property
     def is_erc(self):
@@ -81,7 +79,7 @@ class ContractExp():
         return self.contract.name
 
     #######################################
-    ####        detect  functions      ####
+    ####        Detect  Functions      ####
     #######################################
 
     from naga.core.detectors import (
@@ -90,14 +88,14 @@ class ContractExp():
         detect_unfair_settings,detect_lack_event_functions,)
 
     def _before_detect_erc_svars(self):
-        self.label_svars_dict = dict() # 通过 label 查找对应的变量
+        self.label_svars_dict = dict() # Mapping from label to state variables
 
         self._dividing_functions()
 
         self.detect_owners_bwList()
         self._owner_in_require_functions = None
 
-        self._divde_state_vars() # after detect_owners_bwList
+        self._divde_state_vars() # After detect_owners_bwList
 
         self.detect_paused()
 
@@ -139,10 +137,8 @@ class ContractExp():
         self._after_detect_erc_svars()
 
     def _dividing_functions(self):
-        """
-            初始化所有相关的 function
-        """
-        self.functions: List["FunctionExp"] = [] # 所有的 entry functions
+
+        self.functions: List["FunctionExp"] = [] # All entry functions
         self.state_var_written_functions: List["FunctionExp"] = []
         self.state_var_read_functions: List["FunctionExp"] = []
         self.state_var_written_functions_dict:Dict("StateVariable",["FunctionExp"]) = dict()
@@ -151,6 +147,7 @@ class ContractExp():
         self.state_var_read_in_requires_dict: Dict("StateVariable",["RequireExp"]) = dict()
         self.all_state_vars: List["StateVariable"] = []
 
+        # Functions defined in the token contract
         self.token_write_function_sigs = list(set(ERC20_WRITE_FUNCS_SIG+ERC721_WRITE_FUNCS_SIG+ERC1155_WRITE_FUNCS_SIG))
         self.token_written_functions: List["FunctionExp"] = [] # 接口中定义的用户的写函数，我们通过这些函数来判定一个 owner 是否为 bwList 或 paused
 
@@ -162,7 +159,7 @@ class ContractExp():
             if len(f.function.all_state_variables_written()) > 0:
                 self.state_var_written_functions.append(f)
         
-        # 获取所有的 transfer functions
+        # Get all transfer functions
         for fs in self.token_write_function_sigs :
             f = self.get_function_from_signature(fs)
             if f is not None:
@@ -222,17 +219,8 @@ class ContractExp():
             self._owner_in_require_functions = list(set(owner_in_require_functions))
         return self._owner_in_require_functions
 
-
-
     def _divde_state_vars(self):
 
-        """
-            搜索用户调用的标准接口中所有读写的变量，如：手续费，balance，
-            如果一个变量用户可以写，而owner也可以写（例如 balance），那么说明 owner 可以操纵用户数据，（潜在的风险是，owner 泄露时，黑客可以转走钱）
-            如果一个变量用户不能写，但是 owner 可以写，我们认为这个变量是约束变量，例如 paused, 手续费等
-            如果这些变量，owner 也可以修改，则这些变量是 unfair_settings
-            用户可以写，owner 也可以写，用户不能写， owner 可以写
-        """
         svars_read = []
         svars_user_read = []
         svars_owner_read = []
@@ -277,14 +265,13 @@ class ContractExp():
         self.state_vars_user_written = svars_user_written
         self.state_vars_owner_updated = svars_owner_updated
 
-
         self.state_vars_user_only_read = svars_user_only_read
         self.state_vars_user_only_read_owner_updated = svars_user_only_read_owner_updated
         self.state_vars_user_written_owner_updated = svars_user_written_owner_updated
 
     def get_svar_read_written_functions(self, state_var):
         """
-            获得一个变量的分别被 user 和 owner 的读写情况
+        Users and owners read and write permissions on state variables
         """
         functions_user_read: List["FunctionExp"] = []
         functions_user_written: List["FunctionExp"] = []
@@ -366,9 +353,3 @@ class ContractExp():
     
     def summary_csv(self):
         return self.contract_summary2csv()
-
-
-def list2str(l):
-    l = [str(i) for i in l]
-    return ','.join(l)
-    

@@ -16,10 +16,9 @@ from slither.slithir.variables import (
 from slither.core.variables.state_variable import StateVariable
 from slither.core.variables.local_variable import LocalVariable
 
-
 class VariableGroup:
     '''
-        一个 node 可能依赖一组变量，我们使用这个类来管理这些变量
+    一个 node 可能依赖一组变量，我们使用这个类来管理这些变量
     '''
     def __init__(self, all_vars = None,dep_irs_ssa = None):
         self.all_vars = all_vars

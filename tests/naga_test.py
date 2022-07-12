@@ -1,6 +1,6 @@
 import sys
-sys.path.append(r"/mnt/d/onedrive/sdu/Research/centralization_in_blackchain/naga")
-from slither_compiler import SlitherCompiler
+sys.path.append(r"/data/disk_16t_2/kailun/scc/naga")
+from slither_compiler import *
 import os
 import time
 from naga.naga import Naga
@@ -16,12 +16,12 @@ class NagaTest():
     def get_slither(self,):
         sol_dir = os.path.join(self.contracts_dir, self.contract['address'] + '_' + self.contract['name'])
         if os.path.exists(sol_dir):
-            return SlitherCompiler().multi_compile(sol_dir,self.contract['compiler'])
+            return multi_compile(sol_dir,self.contract['compiler'])
         sol_file = sol_dir +'.sol'
         if os.path.exists(sol_file):
-            return SlitherCompiler().single_compile(sol_file,self.contract['compiler'])
+            return single_compile(sol_file,self.contract['compiler'])
         
-        #return SlitherCompiler().etherscan_download_compile(self.contract['address'],self.contract['name'],self.contract['compiler'],contracts_dir)
+        #return etherscan_download_compile(self.contract['address'],self.contract['name'],self.contract['compiler'],contracts_dir)
         
     def local_test(self):
 
@@ -31,7 +31,7 @@ class NagaTest():
             s_end_time = time.time()
             self.contract['slither_compile_cost'] = s_end_time - s_start_time
         except:
-            with open(os.path.join(self.input_dir,'errors',self.contract['address']+'_slither'),'w') as f:
+            with open(os.path.join(self.output_dir,'errors',self.contract['address']+'_slither'),'w') as f:
                 pass
             return
 
@@ -61,7 +61,6 @@ def producer(q,contracts):
     for c in tqdm(contracts):
         q.put(c)
 
-
 def consumer(q,input_dir,output_dir):
     while 1:
         c = q.get()
@@ -70,7 +69,7 @@ def consumer(q,input_dir,output_dir):
             try:
                 nagaT.local_test()
             except:
-                with open(os.path.join(input_dir,'errors',c['address']+'_naga'),'w') as f:
+                with open(os.path.join(output_dir,'errors',c['address']+'_naga'),'w') as f:
                     pass
         else:
             return
@@ -137,13 +136,17 @@ def run(input_dir,output_dir, erc_force = None, process_num = 4):
 
     _count_errors(output_dir)
 
-
-root_path = '/mnt/c/Users/vk/Desktop/naga_test'
-def erc20_start():
-    erc_force  = 'erc20'
-    erc_base_path = os.path.join(root_path,'token_tracker',erc_force)
-    run(erc_base_path,os.path.join(root_path,'naga',erc_force),erc_force)
+input_dir = '/home/yankailun/naga_test'
+output_dir = '/data/disk_16t_2/kailun/scc/naga_output'
+def start(erc_force):
+    if erc_force == 'mainnet':
+        run(os.path.join(input_dir,'mainnet'),os.path.join(output_dir,erc_force),None)
+    else:
+        run(os.path.join(input_dir,'token_tracker',erc_force),os.path.join(output_dir,erc_force),None)
 
 if __name__ == "__main__":
-    erc20_start()
-
+    #start('erc20')
+    #start('erc721')
+    #start('erc1155')
+    #start('mainnet')
+    pass

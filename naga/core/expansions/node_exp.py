@@ -17,7 +17,7 @@ class NodeExp():
 
 def node_track(node, tainted_vars = None):
     '''
-        输入一个 require node, 根据 node 找到所有依赖的变量
+    Track all relevant variables of a node.
     '''
     nodes = node.function.nodes
     while nodes:
@@ -32,13 +32,13 @@ def node_track(node, tainted_vars = None):
 
 def irs_ssa_track(irs, tainted_vars=None):
     """
-        输入一组 irs，从最后一个往上追踪
+    Input a list of irs, track from the last ir.
 
-        首先从 ir.read 中找到读依赖，分别判断，如果是 Constant 或 SolidityVariable 类型，则停止查找直接存入依赖，否则继续查找，直到找不到。
-        查找过程为：
-            将待查变量放到待查数组中，
-            由于每一行都是之前行的依赖，因此查找下一行中是否有赋值，如果有，则使用赋值替换此变量
-            遇到 internalcall,则从return 开始，同样查找依赖，并更新。
+    首先从 ir.read 中找到读依赖，分别判断，如果是 Constant 或 SolidityVariable 类型，则停止查找直接存入依赖，否则继续查找，直到找不到。
+    查找过程为：
+        将待查变量放到待查数组中，
+        由于每一行都是之前行的依赖，因此查找下一行中是否有赋值，如果有，则使用赋值替换此变量
+        遇到 internalcall,则从return 开始，同样查找依赖，并更新。
     """
 
     if len(irs) == 0: return []

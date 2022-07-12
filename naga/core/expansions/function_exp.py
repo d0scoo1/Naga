@@ -67,9 +67,10 @@ class FunctionExp():
     def owner_candidates(self) -> List["Variable"]:
         if self._owner_candidates is not None:
             return self._owner_candidates
-        self._owner_candidates = []
+        owner_candidates = []
         for require in self.requires:
-            self._owner_candidates += require.owner_candidates
+            owner_candidates += require.owner_candidates
+        self._owner_candidates = list(set(owner_candidates))
         return self._owner_candidates
 
     @property

@@ -8,10 +8,11 @@ from typing import List
 
 def get_requires(node:Node) -> List:
     '''
-        一个 require 中可能有多个 && 条件，这等价于多个 require，所以依据 require 中的 && 条件分割成多个 require
+    The REQUIRE statement could have more than one condition, connected by AND &&, which is equal to multiple requires.
+    We divide the requires into multiple requires by &&.
     '''
     if not any( c.name in ["require(bool)", "require(bool,string)"] for c in node.solidity_calls):
-        print("Require node is not a require node")
+        #print("Require node is not a require node")
         return
     
     msg = ''
@@ -45,14 +46,12 @@ class RequireExp(NodeExp):
 
     def _get_owner_candidates(self):
         """
-            如果 all_read_vars_group 中 local_vars 为空，state_vars 中有 address 或 mapping(address => bool)，且 solidity_vars 中存在一个 msg.sender，则我们认为它可能是 owner
+        如果 all_read_vars_group 中 local_vars 为空，state_vars 中有 address 或 mapping(address => bool)，且 solidity_vars 中存在一个 msg.sender，则我们认为它可能是 owner
         """
-        #if str(self.node.function) == "updateNameAndSymbol":
-            #print(self.node.function,self.all_read_vars_group)
 
         if len(self.all_read_vars_group.local_vars) > 0 or SolidityVariableComposed('msg.sender') not in self.all_read_vars_group.solidity_vars:
             return []
-        
+
         owner_candidates = []
         for svar in self.all_read_vars_group.state_vars:
             if svar.type == ElementaryType('address') or str(svar.type).startswith('bytes'):
@@ -60,8 +59,7 @@ class RequireExp(NodeExp):
 
             elif isinstance(svar.type, MappingType) and (svar.type.type_from == ElementaryType('address') or str(svar.type.type_from).startswith('bytes')): #and svar.type.type_to == ElementaryType('bool'):
                 owner_candidates.append(svar)
-                
-   
+
         return owner_candidates
 
     def __str__(self):

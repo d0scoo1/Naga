@@ -18,7 +18,7 @@ ERC721_STATE_VARIAVLES = [
     ('uri','tokenURI(uint256)','string',['uri'])
 ]
 ERC1155_STATE_VARIAVLES = [
-     ('balances','balanceOf(address, uint256)','mapping(uint256 => mapping(address => uint256))',['balance']),
+    ('balances','balanceOf(address, uint256)','mapping(uint256 => mapping(address => uint256))',['balance']),
     ('operatorApprovals','isApprovedForAll(address, address)','mapping(address => mapping(address => bool))',['operatorapproval']),
     ('uri','uri(uint256)','string',['uri']),
     ('totalSupply','totalSupply()', 'mapping(uint256 => uint256)', ['totalsupply'])

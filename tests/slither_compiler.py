@@ -36,33 +36,30 @@ def get_solc_remaps(version='0.8.0',openzeppelin_dir = openzeppelin_dir):
         return "@openzeppelin/=" + openzeppelin_dir + "/openzeppelin-contracts-solc-0.8/"
     return "@openzeppelin/=" + openzeppelin_dir + "/openzeppelin-contracts-solc-0.8/"
 
-class SlitherCompiler():
-    def __init__(self) -> None:
-        pass
 
-    def single_compile(self,sol_path,compiler_version):
-        return Slither(sol_path,
+def single_compile(sol_path,compiler_version):
+    return Slither(sol_path,
+        solc = get_solc(compiler_version),
+        disable_solc_warnings = True,
+        solc_remaps = get_solc_remaps(compiler_version)
+    )
+
+def multi_compile(sol_dir,compiler_version):
+    return Slither(CryticCompile
+                    (MultiSolFiles(
+                        sol_dir,solc_remaps = get_solc_remaps(compiler_version)),
+                    solc = get_solc(compiler_version),
+                    compiler_version=compiler_version),
+                disable_solc_warnings = True)
+
+def etherscan_download_compile(contract_address,compiler_version,contracts_dir):
+    return Slither(
+        CryticCompile(
+            Etherscan(contract_address,disable_solc_warnings = True),
             solc = get_solc(compiler_version),
-            disable_solc_warnings = True,
-            solc_remaps = get_solc_remaps(compiler_version)
-        )
-
-    def multi_compile(self,sol_dir,compiler_version):
-        return Slither(CryticCompile
-                        (MultiSolFiles(
-                            sol_dir,solc_remaps = get_solc_remaps(compiler_version)),
-                        solc = get_solc(compiler_version),
-                        compiler_version=compiler_version),
-                    disable_solc_warnings = True)
-
-    def etherscan_download_compile(self,contract_address,compiler_version,contracts_dir):
-        return Slither(
-            CryticCompile(
-                Etherscan(contract_address,disable_solc_warnings = True),
-                solc = get_solc(compiler_version),
-                solc_remaps = get_solc_remaps(self.contract_compiler),etherscan_only_source_code = True,
-                etherscan_api_key=etherscan_api_key,
-                export_dir =contracts_dir))
+            solc_remaps = get_solc_remaps(compiler_version),etherscan_only_source_code = True,
+            etherscan_api_key=etherscan_api_key,
+            export_dir =contracts_dir))
 
 def get_solc(compiler_version):
     return solc_dir +'solc-'+ compiler_version

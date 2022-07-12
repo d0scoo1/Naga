@@ -1,7 +1,5 @@
 from typing import List, Dict,Optional
-from slither.core.declarations import Contract
 from slither.core.variables.state_variable import StateVariable
-
 from slither.core.solidity_types.elementary_type import ElementaryType
 from slither.core.solidity_types.mapping_type import MappingType
 
@@ -59,37 +57,34 @@ class StateVarLabel(Enum):
 
 def detect_owners_bwList(self):
     """
-        搜索所有的 owners
-        1. owner 需要是 state variable
-        2. owner 的类型是 address 或 mapping()
-        3. owner 如果存在写函数，
-            3.1 为构造函数
-        或 3.2 写函数被 require约束，且约束条件中仅包含 state var, msg.sender
+    Search owners, black list, white list.
+
+    搜索所有的 owners
+    1. owner 需要是 state variable
+    2. owner 的类型是 address 或 mapping()
+    3. owner 如果存在写函数，
+        3.1 为构造函数
+    或 3.2 写函数被 require约束，且约束条件中仅包含 state var, msg.sender
     """
 
     # 检索所有的 function 查看是否有符合类型的 state variable
-
     all_candidates = [svar for f in self.functions for svar in f.owner_candidates]
 
     owner_candidates = []
-    for svar in list(set(all_candidates)):
+    for svar in all_candidates:
         # 检查 candidates 所有的写函数是否被 owner 约束
          # 如果不是构造函数，并且不存在 owner candidates
-
         if any(len(f.owner_candidates) == 0 and not f.is_constructor_or_initializer
             for f in self.state_var_written_functions_dict[svar]
             ):
             continue
         owner_candidates.append(svar)
 
-    
-    
     # 检查每个 owner_candidate 依赖的 owner 是否也属于 owner_candidate
     # 首先找出自我依赖的，然后检查剩余的是否依赖于自我依赖
     owners_1 = []
     for svar in owner_candidates:
         # 检查是否存在自我依赖：owner 的写函数是 owner in require functions 的子集 (上一步中，我们已经确定每个 owner 的写函数都被 owner_candidates 约束)
-
         read_in_require_funcs = self.state_var_read_in_require_functions_dict[svar]
         # 去掉 written_funcs 中的构造函数
         written_funcs =[f for f in self.state_var_written_functions_dict[svar] if not f.is_constructor_or_initializer ]
@@ -99,7 +94,7 @@ def detect_owners_bwList(self):
         owners_1.append(svar)
     
     # 检查剩余的 owner 是否依赖于 owner
-    # 找出每个 candidates 的写函数，得到他们写函数的约束的 owner,如果约束 owner 存在于上述 owner 中，则成立，
+    # 找出每个 candidates 的写函数，得到他们写函数的约束的 owner,如果约束 owner 存在于 owner_1 + 自己 中，则成立，
     owners_1 = list(set(owners_1))
     owner_candidates = list(set(owner_candidates)-set(owners_1))
 
@@ -107,22 +102,21 @@ def detect_owners_bwList(self):
     for svar in owner_candidates:
         dep_owners = []
         for t_wf in [f for f in self.state_var_written_functions_dict[svar] if not f.is_constructor_or_initializer]: dep_owners += t_wf.owner_candidates # 这里 构造函数不存在 owner_candidates
-        if len(set(dep_owners) - set(owners_1)) == 0:
+        if len(set(dep_owners) - set(owners_1) - {svar}) == 0: # 如果越来的 owner_1 仅包括 owner_1 + 自己，则成立
             owners_2.append(svar)
 
     owner_candidates = list(set(owner_candidates)-set(owners_2))
     owners_3 = []
     owners_3_index = 0
-    while owners_3_index < len(owner_candidates):
+    while owners_3_index < len(owner_candidates): # 最大深度不过是依次依赖
         for svar in owner_candidates:
             dep_owners = []
             for t_wf in [f for f in self.state_var_written_functions_dict[svar] if not f.is_constructor_or_initializer]: dep_owners += t_wf.owner_candidates # 这里 构造函数不存在 owner_candidates
-            if len(set(dep_owners) - set(owners_1 + owners_2 + owners_3)) == 0:
+            if len(set(dep_owners) - set(owners_1 + owners_2 + owners_3) - {svar}) == 0:
                 owners_3.append(svar)
         owners_3_index += 1
 
-
-    # 如果有 mapping，则需要检查是否为 bwList
+    #If there are mappings in the owners, check whether these state variables are black/white Lists.
     mapping_owners = []
     owners = owners_1 + owners_2 + owners_3
     for svar in owners:
@@ -135,11 +129,12 @@ def detect_owners_bwList(self):
     # blackList / whiteList 和 admin 有相同的模式，因此，需要排除 blackList / whiteList
     # 具体而言，我们检查 token_written_functions 中出现的 mapping owner candidates，如果和 owners 中匹配，我们认为它是 blackList / whiteList 而不是 owner
     bwList = []
-    for ef in self.token_written_functions:
-        for svar in ef.owner_candidates:
-            #if isinstance(svar.type, MappingType) and svar.type.type_from == ElementaryType('address') and svar.type.type_to == ElementaryType('bool'):
-            if svar in mapping_owners:
-                bwList.append(svar)
+    bwList_candidates = [svar for f in self.token_written_functions for svar in f.owner_candidates ]
+    for svar in list(set(bwList_candidates)):
+        #if isinstance(svar.type, MappingType) and svar.type.type_from == ElementaryType('address') and svar.type.type_to == ElementaryType('bool'):
+        if svar in mapping_owners:
+            bwList.append(svar)
+
     self.label_svars_dict.update({
         'owners':list(set(owners)-set(bwList)),
         'owners_1':list(set(owners_1)-set(bwList)),
@@ -148,12 +143,11 @@ def detect_owners_bwList(self):
         'bwList':list(set(bwList))
         })
 
-
 def detect_paused(self):
     """
-        Before Functions: detect_owners_bwList
-        搜索所有的 paused
-        paused 符合以下特点，出现在 tranfer 的 require 中（没有 local variables 出现在 require 中），bool 类型，只有 owner 可以修改
+    Before Functions: detect_owners_bwList
+    搜索所有的 paused
+    paused 符合以下特点，出现在 tranfer 的 require 中（没有 local variables 出现在 require 中），bool 类型，只有 owner 可以修改
     """
     paused_candidates = []
     for svar in self.state_vars_user_only_read_owner_updated:
@@ -170,7 +164,7 @@ def detect_paused(self):
 
 def _search_one_state_var_in_return(self, f_sig:str, type_str:str, svar_lower_names:List[str]) -> StateVariable:
     """ 
-        查找 return 中的返回值
+    查找 return 中的返回值
     """
     func = None
     for f in self.functions:
@@ -214,6 +208,7 @@ def detect_erc1155_state_vars(self):
     rs = _detect_erc_state_vars(self,ERC1155_STATE_VARIAVLES)
     self.label_svars_dict.update(rs)
 
+'''
 def detect_unfair_settings(self):
     """
         Before Functions: detect_owners_bwList, detect_paused, detect_erc_state_vars
@@ -229,12 +224,13 @@ def detect_unfair_settings(self):
     unfair_settings = list(set(unfair_settings) - set(marked_svars))
 
     self.label_svars_dict.update({'unfair_settings':unfair_settings})
+'''
 
 def detect_lack_event_functions(self):
     """
-        Before Functions: detect_owners_bwList
-        如果一个 function 写了 state variable，则应当发送一个 event，提醒用户，这里寻找缺少的 event 的 function。
-        我们并不考虑 event 的参数，关于 event 和实际操作不一致的问题：TokenScope: Automatically Detecting Inconsistent Behaviors of Cryptocurrency Tokens in Ethereum
+    Before Functions: detect_owners_bwList
+    如果一个 function 写了 state variable，则应当发送一个 event，提醒用户，这里寻找缺少的 event 的 function。
+    我们并不考虑 event 的参数，关于 event 和实际操作不一致的问题：TokenScope: Automatically Detecting Inconsistent Behaviors of Cryptocurrency Tokens in Ethereum
     """
 
     lack_event_owner_functions = []
