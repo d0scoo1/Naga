@@ -1,3 +1,4 @@
 tqdm
 logging
 slither-analyzer
+func_timeout
