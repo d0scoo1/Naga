@@ -18,8 +18,8 @@ logging.getLogger("CryticCompile").level = logging.CRITICAL
 
 ###### common config ######
 etherscan_api_key= '68I2GBGUU79X6YSIMA8KVGIMYSKTS6UDPI'
-solc_dir = '/mnt/c/Users/vk/Desktop/naga_test/solc/'
-openzeppelin_dir = '/mnt/c/Users/vk/Desktop/naga_test/openzeppelin-contracts'
+solc_dir = '/mnt/c/Users/vk/Desktop/naga_test/tools/solc/'
+openzeppelin_dir = '/mnt/c/Users/vk/Desktop/naga_test/tools/openzeppelin-contracts'
 
 def get_solc_remaps(version='0.8.0',openzeppelin_dir = openzeppelin_dir):
     '''

@@ -75,7 +75,7 @@ def contract_summary(self):
     summary = {
         #'contract_name': self.contract.name,
         #'address': self.contract_address,
-        #'version': self.version,
+        #'compiler_version': self.compiler_version,
         #'ether_balance':self.ether_balance,
         #'txcount':self.txcount,
         #'date' :self.date,
@@ -198,21 +198,21 @@ def contract_summary(self):
     return info_summary
 
 
+            
 # address, contract_name, is_upgradeable_proxy, is_upgradeable, erc, exist_ownership, exist_paused, owner_written_identities_num, svar_user_read_owner_update, svar_user_write_owner_update,lack_event_functions_num, lack_event_user_function_num, lack_event_owner_function_num,
 def contract_summary2csv(self):
     line = {
         'contract_address':  self.summary['address'],
         'contract_name': self.summary['name'],
-        'version': self.summary['version'],
+        'compiler_version': self.summary['compiler'],
         'is_upgradeable_proxy': self.summary['is_upgradeable_proxy'],
         'is_upgradeable': self.summary['is_upgradeable'],
         'erc': self.summary['erc'],
         'erc_force': self.summary['erc_force'],
-        'ether_balance':self.summary['ether_balance'],
-        'txcount':self.summary['txcount'],
-        'date' :self.summary['date'],
         'naga_test_cost':self.summary['naga_test_cost'],
         'slither_compile_cost':self.summary['slither_compile_cost'],
+        'proxy': self.summary['proxy'],
+        'implementation':self.summary['implementation'],
 
         #### num ########
         'owners': len(self.summary['erc_svars']['owners']),

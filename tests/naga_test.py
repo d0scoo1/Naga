@@ -142,7 +142,7 @@ root_path = '/mnt/c/Users/vk/Desktop/naga_test'
 def erc20_start():
     erc_force  = 'erc20'
     erc_base_path = os.path.join(root_path,'token_tracker',erc_force)
-    run(erc_base_path,erc_base_path+'/naga',erc_force)
+    run(erc_base_path,os.path.join(root_path,'naga',erc_force),erc_force)
 
 if __name__ == "__main__":
     erc20_start()
