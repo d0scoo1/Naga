@@ -13,13 +13,15 @@ class NagaTest():
         self.contracts_dir = os.path.join(input_dir,'contracts')
         self.result_path = os.path.join(output_dir,'results')
 
-    def get_slither(self,):
+    def get_slither(self):
         sol_dir = os.path.join(self.contracts_dir, self.contract['address'] + '_' + self.contract['name'])
         if os.path.exists(sol_dir):
             return multi_compile(sol_dir,self.contract['compiler'])
         sol_file = sol_dir +'.sol'
         if os.path.exists(sol_file):
             return single_compile(sol_file,self.contract['compiler'])
+        
+        
         
         #return etherscan_download_compile(self.contract['address'],self.contract['name'],self.contract['compiler'],contracts_dir)
         
@@ -115,7 +117,7 @@ def _count_errors(output_dir):
     print('naga errors:',len(errors))
     print('slither errors:',len(slither_errors))
 
-def run(input_dir,output_dir, erc_force = None, process_num = 4):
+def run(input_dir,output_dir, erc_force = None, process_num = 50):
     print('input_dir:',input_dir)
     print('output_dir:',output_dir)
     naga_results_dir = os.path.join(output_dir,'results')
@@ -134,6 +136,7 @@ def run(input_dir,output_dir, erc_force = None, process_num = 4):
     p.join()
     for i in range(process_num): q.put(None)
 
+    print('naga results:', len(os.listdir(naga_results_dir)))
     _count_errors(output_dir)
 
 input_dir = '/home/yankailun/naga_test'
@@ -142,11 +145,12 @@ def start(erc_force):
     if erc_force == 'mainnet':
         run(os.path.join(input_dir,'mainnet'),os.path.join(output_dir,erc_force),None)
     else:
-        run(os.path.join(input_dir,'token_tracker',erc_force),os.path.join(output_dir,erc_force),None)
+        run(os.path.join(input_dir,'token_tracker',erc_force),os.path.join(output_dir,erc_force),erc_force)
 
 if __name__ == "__main__":
     #start('erc20')
     #start('erc721')
-    start('erc1155')
-    #start('mainnet')
+    #start('erc1155')
+    start('mainnet')
     pass
+

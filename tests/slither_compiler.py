@@ -1,25 +1,16 @@
-import sys
-sys.path.append(r"/mnt/d/onedrive/sdu/Research/centralization_in_blackchain/naga")
-
-import os
 from slither import Slither
-from naga.naga import Naga
-from naga.core.expansions import ContractExp
-
-
 from crytic_compile import CryticCompile
 #from crytic_compile.platform.all_platforms import Etherscan,Solc
 from test_platform.multiple_sol_files import MultiSolFiles
 from test_platform.etherscan import Etherscan # crytic_compile.platform.Etherscan has bug
 
 import logging
-
 logging.getLogger("CryticCompile").level = logging.CRITICAL
 
 ###### common config ######
 etherscan_api_key= '68I2GBGUU79X6YSIMA8KVGIMYSKTS6UDPI'
-solc_dir = '/mnt/c/Users/vk/Desktop/naga_test/tools/solc/'
-openzeppelin_dir = '/mnt/c/Users/vk/Desktop/naga_test/tools/openzeppelin-contracts'
+solc_dir = '/home/yankailun/naga_test/tools/solc/'
+openzeppelin_dir = '/home/yankailun/naga_test/tools/openzeppelin-contracts'
 
 def get_solc_remaps(version='0.8.0',openzeppelin_dir = openzeppelin_dir):
     '''
