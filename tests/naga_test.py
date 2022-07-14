@@ -41,7 +41,7 @@ class NagaTest():
         except:
             self._write_error('slither_compileError')
             return
-        
+
         try:
             naga_contract = self._naga_test(slither)
         except FunctionTimedOut:
@@ -210,7 +210,7 @@ def start(erc_force):
 if __name__ == "__main__":
     #start('erc20')
     #start('erc721')
-    #start('erc1155')
-    start('mainnet')
+    start('erc1155')
+    #start('mainnet')
     pass
 

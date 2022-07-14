@@ -55,6 +55,19 @@ class StateVarLabel(Enum):
         return "None"
 '''
 
+def detect_modifier_owners(self):
+    '''
+        对比实验
+    '''
+    # 查找所有 onlyOwner
+    modifier_owners = []
+    for  m in self.contract.modifiers:
+        if 'onlyowner' in str(m.name).lower():
+            modifier_owners+=m.state_variables_read
+    modifier_owners = list(set(modifier_owners))
+    self.modifier_owners = modifier_owners
+    return modifier_owners
+
 def detect_owners_bwList(self):
     """
     Search owners, black list, white list.
@@ -79,6 +92,8 @@ def detect_owners_bwList(self):
             ):
             continue
         owner_candidates.append(svar)
+
+    owner_candidates += detect_modifier_owners(self) # 加入 modifier_owners
 
     # 检查每个 owner_candidate 依赖的 owner 是否也属于 owner_candidate
     # 首先找出自我依赖的，然后检查剩余的是否依赖于自我依赖

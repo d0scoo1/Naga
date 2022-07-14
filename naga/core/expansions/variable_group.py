@@ -57,6 +57,15 @@ class VariableGroup:
             else:
                 self.other_vars.append(v)
 
+    def _dict(self):
+        return {
+            "state_vars":[str(s) for s in self.state_vars],
+            "local_vars":[str(s) for s in self.local_vars],
+            "solidity_vars":[str(s) for s in self.solidity_vars],
+            "constant_vars":[str(s) for s in self.constant_vars],
+            "other_vars":[str(s) for s in self.other_vars],
+        }
+
     def __str__(self):
         return "State Vars:[{}] Local Vars:[{}] Solidity Vars:[{}] Constant:[{}]".format(list2str(self.state_vars),list2str(self.local_vars),list2str(self.solidity_vars),list2str(self.constant_vars))
 

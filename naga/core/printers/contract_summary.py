@@ -104,6 +104,8 @@ def contract_summary(self):
             '1111':0, #
         },
         'functions': [],
+        'modifier_owners':[],
+        'modifiers':[],
         'lack_event_functions': [],
         'lack_event_user_erc_svars':{},
         'lack_event_owner_erc_svars':{},
@@ -111,8 +113,8 @@ def contract_summary(self):
             '0000':0,'0001':0, '0010':0,'0011':0, '0100':0,'0101':0, '0110':0,'0111':0, 
             '1000':0,'1001':0, '1010':0,'1011':0, '1100':0,'1101':0, '1110':0,'1111':0, 
         }
-
     }
+
 
     for svar in self.all_state_vars:
         svar_summary = {
@@ -132,19 +134,25 @@ def contract_summary(self):
             'name': f.function.full_name,
             'state_variables_read':[svar.name for svar in f.function.all_state_variables_read()],
             'state_variables_written': [svar.name for svar in f.function.all_state_variables_written()],
+            'solidity_variables_read':[svar.name for svar in f.function.all_solidity_variables_read()],
+            'requires': [r._dict() for r in f.requires],
             'owner_in_require': f in self.owner_in_require_functions,
         }
         summary['functions'].append(f_summary)
 
-    for f in self.lack_event_functions:
-        f_summary = {
-            'name': f.function.name,
-            'owner_in_require': f in self.owner_in_require_functions,
-            'state_variables_written': [],
+    summary['modifier_owners'] = [svar.name for svar in self.modifier_owners]
+    for m in self.contract.modifiers:
+        modifier = {
+            'name': m.name,
+            'state_variables_read':[svar.name for svar in m.all_state_variables_read()],
+            'state_variables_written': [svar.name for svar in m.all_state_variables_written()],
+            'solidity_variables_read':[svar.name for svar in m.all_solidity_variables_read()],
         }
-        for svar in f.function.all_state_variables_written():
-            f_summary['state_variables_written'].append(svar.name)
-        summary['lack_event_functions'].append(f_summary)
+        summary['modifiers'].append(modifier)
+
+
+    for f in self.lack_event_functions:
+        summary['lack_event_functions'].append(f.function.name)
     
     svar_label_summary = dict()
     for svar_label in get_common_labels() + get_svar_labels():
@@ -195,6 +203,7 @@ def contract_summary(self):
 
     info_summary =  self.info # add info to summary
     info_summary.update(summary)
+    #print(info_summary)
     return info_summary
 
 

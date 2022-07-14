@@ -181,7 +181,7 @@ def combine_contracts_info(root_dir):
     with open(contracts_info_path, 'a') as f:
         f.writelines(contracts_info)
 
-def run(root_dir,process_num:int = 10):
+def run(root_dir,process_num:int = 50):
     print('Parsing...')
     raws_dir = os.path.join(root_dir,'raws')
     contracts_dir = os.path.join(root_dir,'contracts')
@@ -205,7 +205,7 @@ def run(root_dir,process_num:int = 10):
     combine_contracts_info(root_dir)
     print('Done.')
 
-root_path = 'C:\\Users\\vk\\Desktop\\naga_test'
+root_path = '/home/yankailun/naga_test'
 
 def start(path):
     run(os.path.join(root_path,path))
@@ -224,7 +224,7 @@ def mainnet_start():
 
 
 if __name__ == "__main__":
-    #erc20_start()
+    erc20_start()
     #erc721_start()
-    erc1155_start()
+    #erc1155_start()
     #mainnet_start()
