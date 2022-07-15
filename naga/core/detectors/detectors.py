@@ -57,16 +57,25 @@ class StateVarLabel(Enum):
 
 def detect_modifier_owners(self):
     '''
-        对比实验
+    modifier 可以找出定义的 owner, 但是这个 owner 有可能并没有被使用（例如mainnet/0x992a8a9f4bde0fb2ee1f5bbb3cb7b1e64748e13d）
     '''
     # 查找所有 onlyOwner
-    modifier_owners = []
+    all_modifier_owners = []
     for  m in self.contract.modifiers:
         if 'onlyowner' in str(m.name).lower():
-            modifier_owners+=m.state_variables_read
-    modifier_owners = list(set(modifier_owners))
-    self.modifier_owners = modifier_owners
-    return modifier_owners
+            all_modifier_owners+=m.state_variables_read
+    all_modifier_owners = list(set(all_modifier_owners))
+    self.all_modifier_owners = all_modifier_owners
+
+    modifier_owners_used = []
+    modifier_owners_unused = []
+    for svar in all_modifier_owners:
+        if svar in self.state_var_read_in_require_functions_dict:
+            modifier_owners_used.append(svar)
+        else:
+            modifier_owners_unused.append(svar)
+    self.modifier_owners_used = modifier_owners_used
+    self.modifier_owners_unused = modifier_owners_unused
 
 def detect_owners_bwList(self):
     """
@@ -79,6 +88,8 @@ def detect_owners_bwList(self):
         3.1 为构造函数
     或 3.2 写函数被 require约束，且约束条件中仅包含 state var, msg.sender
     """
+
+    
 
     # 检索所有的 function 查看是否有符合类型的 state variable
     all_candidates = [svar for f in self.functions for svar in f.owner_candidates]
@@ -93,15 +104,19 @@ def detect_owners_bwList(self):
             continue
         owner_candidates.append(svar)
 
-    owner_candidates += detect_modifier_owners(self) # 加入 modifier_owners
+    detect_modifier_owners(self)
+    owner_candidates += self.modifier_owners_used # 加入 modifier_owners
+    owner_candidates = list(set(owner_candidates))
 
     # 检查每个 owner_candidate 依赖的 owner 是否也属于 owner_candidate
     # 首先找出自我依赖的，然后检查剩余的是否依赖于自我依赖
     owners_1 = []
     for svar in owner_candidates:
         # 检查是否存在自我依赖：owner 的写函数是 owner in require functions 的子集 (上一步中，我们已经确定每个 owner 的写函数都被 owner_candidates 约束)
+
         read_in_require_funcs = self.state_var_read_in_require_functions_dict[svar]
         # 去掉 written_funcs 中的构造函数
+
         written_funcs =[f for f in self.state_var_written_functions_dict[svar] if not f.is_constructor_or_initializer ]
 
         if len(set(written_funcs) - set(read_in_require_funcs)) > 0:

@@ -122,11 +122,14 @@ def _load_contracts(input_dir,output_dir,erc_force = None):
     staled_contracts = []
     contracts = []
     for c in contracts_info:
+        if c['Proxy'] == '1':
+            continue
         if int(c['compiler'][2]) <= 4:
             staled_contracts.append(c)
             continue
         if c['address'] in contracts_tested:
             continue
+        
         contractInfo ={
             'address': c['address'],
             'name': c['name'],
@@ -135,8 +138,8 @@ def _load_contracts(input_dir,output_dir,erc_force = None):
             'slither_compile_cost': 0,
             'naga_test_cost': 0,
             'erc_force':erc_force,
-            'proxy': c['Proxy'],
-            'implementation':c['Implementation'],
+            #'proxy': c['Proxy'],
+            #'implementation':c['Implementation'],
         }
         contracts.append(contractInfo)
     
@@ -207,10 +210,40 @@ def start(erc_force):
     else:
         run(os.path.join(input_dir,'token_tracker',erc_force),os.path.join(output_dir,erc_force),erc_force)
 
+
+def test_one():
+    contracts_info =[]
+    with open(os.path.join('/home/yankailun/naga_test/mainnet/contracts_info.json'), 'r') as fr:
+        line = fr.readline()
+        while line != '':
+            contracts_info.append(json.loads(line))
+            line = fr.readline()
+
+    for c in contracts_info:
+        if c['address'] == '0x2e55292b79EF06B899Fd695D5DdfB9503c120992_naga_error'[:42]:
+            contract  ={
+            'address': c['address'],
+            'name': c['name'],
+            'compiler': c['compiler'],
+            'entry_sol_file': "",
+            'slither_compile_cost': 0,
+            'naga_test_cost': 0,
+            'erc_force':None,
+            'proxy': c['Proxy'],
+            'implementation':c['Implementation'],
+        }
+            break
+
+    ng = NagaTest(contract=contract,input_dir='/home/yankailun/naga_test/mainnet',output_dir='/data/disk_16t_2/kailun/scc/naga_output/mainnet')
+    slither = ng._get_slither()
+    ng._naga_test(slither)
+
+
+
 if __name__ == "__main__":
     #start('erc20')
     #start('erc721')
-    start('erc1155')
-    #start('mainnet')
+    #start('erc1155')
+    start('mainnet')
+    #test_one()
     pass
-

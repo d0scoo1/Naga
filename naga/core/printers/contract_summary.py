@@ -104,7 +104,9 @@ def contract_summary(self):
             '1111':0, #
         },
         'functions': [],
-        'modifier_owners':[],
+        'all_modifier_owners':[],
+        'modifier_owners_used':[],
+        'modifier_owners_unused':[],
         'modifiers':[],
         'lack_event_functions': [],
         'lack_event_user_erc_svars':{},
@@ -140,7 +142,9 @@ def contract_summary(self):
         }
         summary['functions'].append(f_summary)
 
-    summary['modifier_owners'] = [svar.name for svar in self.modifier_owners]
+    summary['all_modifier_owners'] = [svar.name for svar in self.all_modifier_owners]
+    summary['modifier_owners_used'] = [svar.name for svar in self.modifier_owners_used]
+    summary['modifier_owners_unused'] = [svar.name for svar in self.modifier_owners_unused]
     for m in self.contract.modifiers:
         modifier = {
             'name': m.name,

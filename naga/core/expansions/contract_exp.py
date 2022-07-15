@@ -9,7 +9,7 @@ from naga.core.erc import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_
 import json
 
 class ContractExp():
-    def __init__(self,contract,nagaObj) -> None:
+    def __init__(self,contract:Contract,nagaObj) -> None:
         self.contract = contract
         self.naga = nagaObj
         self._is_erc20: Optional[bool] = None
@@ -164,7 +164,8 @@ class ContractExp():
             if f is not None:
                 self.token_written_functions.append(f)
         
-        all_state_vars = []
+        all_state_vars = self.contract.all_state_variables_written + self.contract.all_state_variables_read
+
         for f in self.functions:
             for svar in f.function.all_state_variables_written() + f.function.all_state_variables_read():
                 all_state_vars.append(svar)
@@ -173,6 +174,7 @@ class ContractExp():
                     all_state_vars.append(svar)
 
         self.all_state_vars = list(set(all_state_vars))
+
         for s in self.all_state_vars:
             self.state_var_written_functions_dict[s] = []
             self.state_var_read_functions_dict[s] = []
