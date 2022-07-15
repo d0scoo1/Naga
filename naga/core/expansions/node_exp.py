@@ -1,3 +1,4 @@
+
 from typing import List
 from slither.core.cfg.node import Node
 from .variable_group import (VariableGroup,var_group_combine)
@@ -30,7 +31,7 @@ def node_track(node, tainted_vars = None):
 
     return [VariableGroup(dep_irs_ssa = vs) for vs in dep_irs_ssa] # 将每个 irs_ssa 转为 DepVars
 
-def irs_ssa_track(irs, tainted_vars=None, from_functions=set()):
+def irs_ssa_track(irs, tainted_vars, walked_functions):
     """
     Input a list of irs, track from the last ir.
 
@@ -52,21 +53,21 @@ def irs_ssa_track(irs, tainted_vars=None, from_functions=set()):
     else:
         tainted_ir = irs.pop()
 
+    #from_functions = set()
     #from_functions.add(tainted_ir.function.full_name)
     while irs:
         ir = irs.pop()
         if isinstance(ir,NO_LEFT_VALUE_OPERATIONS): #,PhiCallback,SolidityCall,LibraryCall,LowLevelCall,HighLevelCall
             continue
-        #try:
-        #    lval = ir.lvalue
-        #except:
-        #    print(ir,type(ir))
+        try:
+            lval = ir.lvalue
+        except:
+            print(ir,type(ir))
         lval = ir.lvalue  # 由于是从 read 开始查找， read 必有左值，所以这里不进行判断
         rval = []
         if isinstance(ir, InternalCall): # 如果是 internalcall
-            from_functions.add(ir.function.full_name)
-            #print("----internalcall",ir,from_functions)
-            rval = internalCall_track(ir,from_functions) # internalCall_track 返回的是一个 [[],[]] 需要转换为 []
+            #print("----internalcall",ir,from_function)
+            rval = internalCall_track(ir,walked_functions) # internalCall_track 返回的是一个 [[],[]] 需要转换为 []
         else:
             rval = ir.read
 
@@ -86,7 +87,7 @@ def irs_ssa_track(irs, tainted_vars=None, from_functions=set()):
     return tainted_vars
 
 
-def internalCall_track(t_ir,from_functions):
+def internalCall_track(t_ir,walked_functions):
     """
         from_function: 防止循环调用
     """
@@ -96,8 +97,9 @@ def internalCall_track(t_ir,from_functions):
     index = 0
     for ir in irs:
         index += 1
-        if isinstance(ir, Return) and ir.function.full_name not in from_functions:
-            rvals += sum(irs_ssa_track(irs[0:index]),[],from_functions)
+        if isinstance(ir, Return)and ir.function.full_name not in walked_functions:
+            walked_functions.add(ir.function.full_name)
+            rvals += sum(irs_ssa_track(irs[0:index],None,walked_functions),[])
     if rvals != []:
         return rvals
     
@@ -120,22 +122,8 @@ def internalCall_track(t_ir,from_functions):
                 index += 1
                 if isinstance(ir,NO_LEFT_VALUE_OPERATIONS):
                     continue
-                if ir.lvalue is not None and ir.lvalue.non_ssa_version == ret_val and ir.function.full_name not in from_functions:
-                    rvals += sum(irs_ssa_track(irs[0:index]),[],from_functions)
+                if ir.lvalue is not None and ir.lvalue.non_ssa_version == ret_val and ir.function.full_name not in walked_functions:
+                    walked_functions.add(ir.function.full_name)
+                    rvals += sum(irs_ssa_track(irs[0:index],None, walked_functions),[])
 
     return rvals
-
-"""
-def internalCall_track(ir):
-    
-    irs = [ir for n in ir.function.nodes for ir in n.irs_ssa] # all_nodes()
-    if len(irs) == 0: return [] # 由于后面使用了 sum([[]],[]),所以这里必须返回二维数组
-    rval = []
-
-    index = 0
-    for ir in irs:
-        index += 1
-        if isinstance(ir, Return):
-           rval += sum(irs_ssa_track(irs[0:index]),[])
-    return rval
-"""

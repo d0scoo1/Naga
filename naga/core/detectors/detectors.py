@@ -70,7 +70,7 @@ def detect_modifier_owners(self):
     modifier_owners_used = []
     modifier_owners_unused = []
     for svar in all_modifier_owners:
-        if svar in self.state_var_read_in_require_functions_dict:
+        if len(self.state_var_read_in_require_functions_dict[svar]) > 0:
             modifier_owners_used.append(svar)
         else:
             modifier_owners_unused.append(svar)
@@ -89,13 +89,11 @@ def detect_owners_bwList(self):
     或 3.2 写函数被 require约束，且约束条件中仅包含 state var, msg.sender
     """
 
-    
-
     # 检索所有的 function 查看是否有符合类型的 state variable
     all_candidates = [svar for f in self.functions for svar in f.owner_candidates]
 
     owner_candidates = []
-    for svar in all_candidates:
+    for svar in set(all_candidates):
         # 检查 candidates 所有的写函数是否被 owner 约束
          # 如果不是构造函数，并且不存在 owner candidates
         if any(len(f.owner_candidates) == 0 and not f.is_constructor_or_initializer
@@ -103,7 +101,7 @@ def detect_owners_bwList(self):
             ):
             continue
         owner_candidates.append(svar)
-
+        
     detect_modifier_owners(self)
     owner_candidates += self.modifier_owners_used # 加入 modifier_owners
     owner_candidates = list(set(owner_candidates))
