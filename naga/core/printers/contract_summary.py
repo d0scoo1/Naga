@@ -134,6 +134,7 @@ def contract_summary(self):
     for f in self.functions:
         f_summary = {
             'name': f.function.full_name,
+            #'parameters':f.function.parameters,
             'state_variables_read':[svar.name for svar in f.function.all_state_variables_read()],
             'state_variables_written': [svar.name for svar in f.function.all_state_variables_written()],
             'solidity_variables_read':[svar.name for svar in f.function.all_solidity_variables_read()],

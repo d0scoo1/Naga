@@ -243,7 +243,7 @@ def test_one():
 if __name__ == "__main__":
     #start('erc20')
     #start('erc721')
-    #start('erc1155')
-    start('mainnet')
+    start('erc1155')
+    #start('mainnet')
     #test_one()
     pass

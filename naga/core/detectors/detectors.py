@@ -103,12 +103,12 @@ def detect_owners_bwList(self):
         owner_candidates.append(svar)
         
     detect_modifier_owners(self)
-    owner_candidates += self.modifier_owners_used # 加入 modifier_owners
-    owner_candidates = list(set(owner_candidates))
-
+    #owner_candidates += self.modifier_owners_used # 加入 modifier_owners
+    
     # 检查每个 owner_candidate 依赖的 owner 是否也属于 owner_candidate
     # 首先找出自我依赖的，然后检查剩余的是否依赖于自我依赖
-    owners_1 = []
+    owners_1 = self.modifier_owners_used
+    owner_candidates = list(set(owner_candidates)-set(owners_1))
     for svar in owner_candidates:
         # 检查是否存在自我依赖：owner 的写函数是 owner in require functions 的子集 (上一步中，我们已经确定每个 owner 的写函数都被 owner_candidates 约束)
 
@@ -123,14 +123,14 @@ def detect_owners_bwList(self):
     
     # 检查剩余的 owner 是否依赖于 owner
     # 找出每个 candidates 的写函数，得到他们写函数的约束的 owner,如果约束 owner 存在于 owner_1 + 自己 中，则成立，
-    owners_1 = list(set(owners_1))
+    #owners_1 = list(set(owners_1))
     owner_candidates = list(set(owner_candidates)-set(owners_1))
 
     owners_2 = []
     for svar in owner_candidates:
         dep_owners = []
         for t_wf in [f for f in self.state_var_written_functions_dict[svar] if not f.is_constructor_or_initializer]: dep_owners += t_wf.owner_candidates # 这里 构造函数不存在 owner_candidates
-        if len(set(dep_owners) - set(owners_1) - {svar}) == 0: # 如果越来的 owner_1 仅包括 owner_1 + 自己，则成立
+        if len(set(dep_owners) - set(owners_1) - {svar}) == 0: # 如果依赖的 owner_1 仅包括 owner_1 + 自己，则成立
             owners_2.append(svar)
 
     owner_candidates = list(set(owner_candidates)-set(owners_2))
@@ -162,6 +162,8 @@ def detect_owners_bwList(self):
         #if isinstance(svar.type, MappingType) and svar.type.type_from == ElementaryType('address') and svar.type.type_to == ElementaryType('bool'):
         if svar in mapping_owners:
             bwList.append(svar)
+
+
 
     self.label_svars_dict.update({
         'owners':list(set(owners)-set(bwList)),

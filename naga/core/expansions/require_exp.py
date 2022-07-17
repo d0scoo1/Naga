@@ -66,10 +66,10 @@ class RequireExp(NodeExp):
         return {
             "expression": str(self.node.expression),
             "msg": str(self.msg),
-            "state_vars":[str(s) for s in self.all_read_vars_group.state_vars],
-            "local_vars":[str(s) for s in self.all_read_vars_group.local_vars],
-            "solidity_vars":[str(s) for s in self.all_read_vars_group.solidity_vars],
-            "constant_vars":[str(s) for s in self.all_read_vars_group.constant_vars],
+            "state_vars":list(set([str(s) for s in self.all_read_vars_group.state_vars])),
+            "local_vars":list(set([str(s) for s in self.all_read_vars_group.local_vars])),
+            "solidity_vars":list(set([str(s) for s in self.all_read_vars_group.solidity_vars])),
+            "constant_vars":list(set([str(s) for s in self.all_read_vars_group.constant_vars])),
         }
     def __str__(self):
         return "node: {},msg: {}, variables\n{}".format(self.node,self.msg,self.all_read_vars_group)
