@@ -45,7 +45,7 @@ class FunctionExp():
 
     @property
     def is_constructor_or_initializer(self) -> bool:
-        return self.function.is_constructor or 'init' in str(self.function.name).lower()
+        return self.function.is_constructor or 'init' in str(self.function.name).lower() or 'constructor' in str(self.function.name).lower()
 
     @property
     def all_require_nodes(self) -> List["Node"]:

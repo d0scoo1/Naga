@@ -18,15 +18,18 @@ def _get_condition_depVars(node:Node,msg:str) -> List:
     read_vars = node.irs_ssa[-1].read
     r_vars = []
     l_vars = []
+
     for ir in node.irs_ssa:
         if isinstance(ir,Binary) and ir.type == BinaryType.ANDAND: # 找到 && 情况，将其拆分为多个 require
             l_vars.append(ir.lvalue) # 保存左值是为了将 read 中依赖的值去掉
             r_vars += ir.read
-    r_node_conds = list(set(r_vars) - set(l_vars))
+
+    r_node_conds = [ v for v in r_vars if v not in l_vars ]
+    #r_node_conds = list(set(r_vars) - set(l_vars))
 
     if len(r_node_conds) == 0:
         r_node_conds = [read_vars[0]] # 如果没有 && 条件，则直接使用最后一个 ir 的 read 作为 require
-
+    #print('r_node_conds',','.join([str(v) for v in r_node_conds]))
     return [ConditionNode(node, rnc, msg) for rnc in r_node_conds]
 
 def get_require(node:Node) -> List:
