@@ -17,7 +17,7 @@ from slither.core.variables.variable import Variable
 from slither.core.variables.state_variable import StateVariable
 from slither.slithir.operations.event_call import EventCall
 
-from .require_exp import (get_requires,RequireExp)
+from .require_exp import (get_requires,get_if, RequireExp)
 from .node_exp import NodeExp
 from .variable_group import (VariableGroup, var_group_combine)
 
@@ -26,7 +26,9 @@ class FunctionExp():
         #self.__dict__.update(function.__dict__)
         self.function:"FunctionContract" = function
         self._all_require_nodes:List["Node"] = None
+        self._all_if_nodes:List["Node"] = None
         self._requires:List["RequireExp"] = None
+        self._if_statements:List["RequireExp"] = None
         self._owner_candidates:List["Variable"] = None
         self._events:List["EventCall"] = None
         self._return_nodes:List["Node"] = None
@@ -55,13 +57,36 @@ class FunctionExp():
         return self._all_require_nodes
 
     @property
+    def all_if_nodes(self) -> List["Node"]:
+        if self._all_if_nodes is None:
+            nodes = []
+            for node in self.function.all_nodes():
+                if node.contains_if(False):
+                    nodes.append(node)
+            self._all_if_nodes = nodes
+        return self._all_if_nodes
+
+    @property
     def requires(self) -> List["RequireExp"]:
         if self._requires is not None:
             return self._requires
         self._requires = []
         for node in self.all_require_nodes:
             self._requires += get_requires(node)
+        
+        for node in self.all_if_nodes:
+            self._requires += get_if(node)
+        
         return self._requires
+    
+    @property
+    def if_statements(self) -> List["Node"]:
+        if self._if_statements is None:
+            self._if_statements = []
+            for node in self.all_if_nodes:
+                self._if_statements += get_if(node)
+        return self._if_statements
+        
 
     @property
     def owner_candidates(self) -> List["Variable"]:

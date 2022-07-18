@@ -1,3 +1,4 @@
+
 from typing import List, Dict,Optional
 from slither.core.variables.state_variable import StateVariable
 from slither.core.solidity_types.elementary_type import ElementaryType
@@ -55,6 +56,13 @@ class StateVarLabel(Enum):
         return "None"
 '''
 
+def is_owner_type(svar):
+    if svar.type == ElementaryType('address') or svar.type == ElementaryType('bytes32'):
+        return True
+    elif isinstance(svar.type, MappingType) and (svar.type.type_from == ElementaryType('address') or svar.type.type_from == ElementaryType('bytes32')):
+        return True
+
+
 def detect_modifier_owners(self):
     '''
     modifier 可以找出定义的 owner, 但是这个 owner 有可能并没有被使用（例如mainnet/0x992a8a9f4bde0fb2ee1f5bbb3cb7b1e64748e13d）
@@ -62,18 +70,22 @@ def detect_modifier_owners(self):
     # 查找所有 onlyOwner
     all_modifier_owners = []
     for  m in self.contract.modifiers:
-        if 'onlyowner' in str(m.name).lower():
-            all_modifier_owners+=m.state_variables_read
+        if 'onlyowner' in str(m.name).lower() or 'onlyrole' in str(m.name).lower():
+            all_modifier_owners+=m.all_state_variables_read()
     all_modifier_owners = list(set(all_modifier_owners))
     self.all_modifier_owners = all_modifier_owners
 
     modifier_owners_used = []
     modifier_owners_unused = []
     for svar in all_modifier_owners:
+        if not is_owner_type(svar):
+            continue
         if len(self.state_var_read_in_require_functions_dict[svar]) > 0:
             modifier_owners_used.append(svar)
         else:
             modifier_owners_unused.append(svar)
+    print("modifier_owners_used:",len(modifier_owners_used))
+    print("modifier_owners_unused:",len(modifier_owners_unused))
     self.modifier_owners_used = modifier_owners_used
     self.modifier_owners_unused = modifier_owners_unused
 

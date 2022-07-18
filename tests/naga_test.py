@@ -211,7 +211,7 @@ def start(erc_force):
         run(os.path.join(input_dir,'token_tracker',erc_force),os.path.join(output_dir,erc_force),erc_force)
 
 
-def test_one():
+def test_mainnet_one():
     contracts_info =[]
     with open(os.path.join('/home/yankailun/naga_test/mainnet/contracts_info.json'), 'r') as fr:
         line = fr.readline()
@@ -238,12 +238,47 @@ def test_one():
     slither = ng._get_slither()
     ng._naga_test(slither)
 
+def test_one(erc_force= 'erc20'):
+    contracts_info =[]
+    with open(os.path.join('/home/yankailun/naga_test/token_tracker/'+erc_force+'/contracts_info.json'), 'r') as fr:
+        line = fr.readline()
+        while line != '':
+            contracts_info.append(json.loads(line))
+            line = fr.readline()
+
+    for c in contracts_info:
+        if c['address'] == '0xdef1fac7bf08f173d286bbbdcbeeade695129840'[:42]:
+            contract  ={
+            'address': c['address'],
+            'name': c['name'],
+            'compiler': c['compiler'],
+            'entry_sol_file': "",
+            'slither_compile_cost': 0,
+            'naga_test_cost': 0,
+            'erc_force':erc_force,
+            'proxy': c['Proxy'],
+            'implementation':c['Implementation'],
+        }
+            break
+    print('contract:',contract)
+    ng = NagaTest(contract=contract,input_dir=os.path.join(input_dir,'token_tracker',erc_force),output_dir=os.path.join(output_dir,erc_force))
+    slither = ng._get_slither()
+    print('slither:',slither)
+    nagac = ng._naga_test(slither)
+    for f in nagac.functions:
+        if f.function.name == 'pauseContract':
+            print(f.if_statements)
+            print(f.requires)
+            for n in f.requires:
+                print(n)
+
+
 
 
 if __name__ == "__main__":
     #start('erc20')
     #start('erc721')
-    start('erc1155')
+    #start('erc1155')
     #start('mainnet')
-    #test_one()
+    test_one()
     pass
