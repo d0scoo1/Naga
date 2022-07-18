@@ -19,7 +19,7 @@
             'name':'',
             'state_variables_read':[],
             'state_variables_written':[],
-            'owner_in_require':False,
+            'owner_in_condition':False,
         }
     ],
     erc_svars:{
@@ -52,7 +52,7 @@
     'lack_event_functions':[
         {
             'name':'',
-            'owner_in_require':False,
+            'owner_in_condition':False,
             'state_variables_written':[]
         }
     ],
@@ -108,6 +108,8 @@ def contract_summary(self):
         'modifier_owners_used':[],
         'modifier_owners_unused':[],
         'modifiers':[],
+        'onlyOwner_modifiers':[],
+        'onlyRole_modifiers':[],
         'lack_event_functions': [],
         'lack_event_user_erc_svars':{},
         'lack_event_owner_erc_svars':{},
@@ -138,8 +140,8 @@ def contract_summary(self):
             'state_variables_read':[svar.name for svar in f.function.all_state_variables_read()],
             'state_variables_written': [svar.name for svar in f.function.all_state_variables_written()],
             'solidity_variables_read':[svar.name for svar in f.function.all_solidity_variables_read()],
-            'requires': [r._dict() for r in f.requires],
-            'owner_in_require': f in self.owner_in_require_functions,
+            'conditions': [r._print() for r in f.conditions],
+            'owner_in_condition': f in self.owner_in_condition_functions,
         }
         summary['functions'].append(f_summary)
 
@@ -154,7 +156,8 @@ def contract_summary(self):
             'solidity_variables_read':[svar.name for svar in m.all_solidity_variables_read()],
         }
         summary['modifiers'].append(modifier)
-
+    summary['onlyOwner_modifiers'] = [m.name for m in self.onlyOwner_modifiers]
+    summary['onlyRole_modifiers'] = [m.name for m in self.onlyRole_modifiers]
 
     for f in self.lack_event_functions:
         summary['lack_event_functions'].append(f.function.name)
@@ -255,7 +258,7 @@ def contract_summary2csv(self):
         'functions_num': len(self.summary['functions']),
         'read_functions_num': 0,
         'write_functions_num': 0,
-        'owner_in_require_functions_num': 0, # 
+        'owner_in_condition_functions_num': 0, # 
 
         'lack_event_functions_num': len(self.summary['lack_event_functions']),
         'lack_event_user_functions_num': 0, #
@@ -317,22 +320,22 @@ def contract_summary2csv(self):
 
     read_functions_num = 0
     write_functions_num = 0
-    owner_in_require_functions_num = 0
+    owner_in_condition_functions_num = 0
     for f in self.summary['functions']:
         if len(f['state_variables_read']) > 0 and len(f['state_variables_written']) == 0:
             read_functions_num += 1
         if len(f['state_variables_written']) > 0:
             write_functions_num += 1
-        if f['owner_in_require']:
-            owner_in_require_functions_num += 1
+        if f['owner_in_condition']:
+            owner_in_condition_functions_num += 1
     line['read_functions_num'] = read_functions_num
     line['write_functions_num'] = write_functions_num
-    line['owner_in_require_functions_num'] = owner_in_require_functions_num
+    line['owner_in_condition_functions_num'] = owner_in_condition_functions_num
 
     lack_event_user_functions_num = 0
     lack_event_owner_functions_num = 0
     for f in self.summary['lack_event_functions']:
-        if f['owner_in_require']:
+        if f['owner_in_condition']:
             lack_event_owner_functions_num += 1
         else:
             lack_event_user_functions_num += 1

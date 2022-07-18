@@ -17,7 +17,7 @@ from slither.core.variables.variable import Variable
 from slither.core.variables.state_variable import StateVariable
 from slither.slithir.operations.event_call import EventCall
 
-from .require_exp import (get_requires,get_if, RequireExp)
+from .condition_exp import (get_require, get_if, ConditionNode)
 from .node_exp import NodeExp
 from .variable_group import (VariableGroup, var_group_combine)
 
@@ -27,8 +27,12 @@ class FunctionExp():
         self.function:"FunctionContract" = function
         self._all_require_nodes:List["Node"] = None
         self._all_if_nodes:List["Node"] = None
-        self._requires:List["RequireExp"] = None
-        self._if_statements:List["RequireExp"] = None
+        self._all_condition_nodes:List["Node"] = None
+
+        self._require_conditions:List["ConditionNode"] = None
+        self._if_conditions:List["ConditionNode"] = None
+        self._conditions:List["ConditionNode"] = None
+
         self._owner_candidates:List["Variable"] = None
         self._events:List["EventCall"] = None
         self._return_nodes:List["Node"] = None
@@ -65,36 +69,43 @@ class FunctionExp():
                     nodes.append(node)
             self._all_if_nodes = nodes
         return self._all_if_nodes
-
-    @property
-    def requires(self) -> List["RequireExp"]:
-        if self._requires is not None:
-            return self._requires
-        self._requires = []
-        for node in self.all_require_nodes:
-            self._requires += get_requires(node)
-        
-        for node in self.all_if_nodes:
-            self._requires += get_if(node)
-        
-        return self._requires
     
     @property
-    def if_statements(self) -> List["Node"]:
-        if self._if_statements is None:
-            self._if_statements = []
+    def all_condition_nodes(self) -> List["Node"]:
+        if self._all_condition_nodes is None:
+            self._all_condition_nodes = self.all_require_nodes + self.all_if_nodes
+        return self._all_condition_nodes
+
+    @property
+    def require_conditions(self) -> List["ConditionNode"]:
+        if self._require_conditions is not None:
+            return self._require_conditions
+        self._require_conditions = []
+        for node in self.all_require_nodes:
+            self._require_conditions += get_require(node)
+        return self._require_conditions
+    
+    @property
+    def if_conditions(self) -> List["ConditionNode"]:
+        if self._if_conditions is None:
+            self._if_conditions = []
             for node in self.all_if_nodes:
-                self._if_statements += get_if(node)
-        return self._if_statements
-        
+                self._if_conditions += get_if(node)
+        return self._if_conditions
+
+    @property
+    def conditions(self) -> List["ConditionNode"]:
+        if self._conditions is None:
+            self._conditions = self.require_conditions + self.if_conditions
+        return self._conditions
 
     @property
     def owner_candidates(self) -> List["Variable"]:
         if self._owner_candidates is not None:
             return self._owner_candidates
         owner_candidates = []
-        for require in self.requires:
-            owner_candidates += require.owner_candidates
+        for cond in self.conditions:
+            owner_candidates += cond.owner_candidates
         self._owner_candidates = list(set(owner_candidates))
         return self._owner_candidates
 
@@ -124,39 +135,12 @@ class FunctionExp():
 
         self._return_var_group = var_group_combine([exp_node.all_read_vars_group for exp_node in self.return_nodes])
         return self._return_var_group
-            
-    """
-    @property
-    def state_vars_read_in_requires(self) :
-        if self._state_vars_read_in_requires is not None:
-            return self._state_vars_read_in_requires
-        
-        self._state_vars_read_in_requires = []
-        for exp_req in self.requires:
-            self._state_vars_read_in_requires += exp_req.all_read_vars_group.state_vars
-        return self._state_vars_read_in_requires
+
+    def __str__(self) -> str:
+        return self.function.name
     
     @property
-    def local_vars_read_in_requires(self):
-        if self._local_vars_read_in_requires is not None:
-            return self._local_vars_read_in_requires
-        
-        self._local_vars_read_in_requires = []
-        for exp_req in self.requires:
-            self._local_vars_read_in_requires += exp_req.all_read_vars_group.local_vars
-        return self._local_vars_read_in_requires
-
-    @property
-    def solidity_vars_read_in_requires(self):
-        if self._solidity_vars_read_in_requires is not None:
-            return self._solidity_vars_read_in_requires
-        
-        self._solidity_vars_read_in_requires = []
-        for exp_req in self.requires:
-            self._solidity_vars_read_in_requires += exp_req.all_read_vars_group.solidity_vars
-        return self._solidity_vars_read_in_requires
-    """
-    def __str__(self) -> str:
+    def name(self) -> str:
         return self.function.name
 
 

@@ -69,9 +69,16 @@ def detect_modifier_owners(self):
     '''
     # 查找所有 onlyOwner
     all_modifier_owners = []
+    self.onlyOwner_modifiers = []
+    self.onlyRole_modifiers = []
     for  m in self.contract.modifiers:
-        if 'onlyowner' in str(m.name).lower() or 'onlyrole' in str(m.name).lower():
+        if 'onlyowner' in str(m.name).lower():
             all_modifier_owners+=m.all_state_variables_read()
+            self.onlyOwner_modifiers.append(m)
+        if  'onlyrole' in str(m.name).lower():
+            all_modifier_owners+=m.all_state_variables_read()
+            self.onlyRole_modifiers.append(m)
+
     all_modifier_owners = list(set(all_modifier_owners))
     self.all_modifier_owners = all_modifier_owners
 
@@ -80,12 +87,12 @@ def detect_modifier_owners(self):
     for svar in all_modifier_owners:
         if not is_owner_type(svar):
             continue
-        if len(self.state_var_read_in_require_functions_dict[svar]) > 0:
+        if len(self.state_var_read_in_condition_functions_dict[svar]) > 0:
             modifier_owners_used.append(svar)
         else:
             modifier_owners_unused.append(svar)
-    print("modifier_owners_used:",len(modifier_owners_used))
-    print("modifier_owners_unused:",len(modifier_owners_unused))
+    #print("modifier_owners_used:",len(modifier_owners_used))
+    #print("modifier_owners_unused:",len(modifier_owners_unused))
     self.modifier_owners_used = modifier_owners_used
     self.modifier_owners_unused = modifier_owners_unused
 
@@ -98,7 +105,7 @@ def detect_owners_bwList(self):
     2. owner 的类型是 address 或 mapping()
     3. owner 如果存在写函数，
         3.1 为构造函数
-    或 3.2 写函数被 require约束，且约束条件中仅包含 state var, msg.sender
+    或 3.2 写函数被 condition约束，且约束条件中仅包含 state var, msg.sender
     """
 
     # 检索所有的 function 查看是否有符合类型的 state variable
@@ -122,14 +129,14 @@ def detect_owners_bwList(self):
     owners_1 = self.modifier_owners_used
     owner_candidates = list(set(owner_candidates)-set(owners_1))
     for svar in owner_candidates:
-        # 检查是否存在自我依赖：owner 的写函数是 owner in require functions 的子集 (上一步中，我们已经确定每个 owner 的写函数都被 owner_candidates 约束)
+        # 检查是否存在自我依赖：owner 的写函数是 owner in condition functions 的子集 (上一步中，我们已经确定每个 owner 的写函数都被 owner_candidates 约束)
 
-        read_in_require_funcs = self.state_var_read_in_require_functions_dict[svar]
+        read_in_condition_funcs = self.state_var_read_in_condition_functions_dict[svar]
         # 去掉 written_funcs 中的构造函数
 
         written_funcs =[f for f in self.state_var_written_functions_dict[svar] if not f.is_constructor_or_initializer ]
 
-        if len(set(written_funcs) - set(read_in_require_funcs)) > 0:
+        if len(set(written_funcs) - set(read_in_condition_funcs)) > 0:
             continue
         owners_1.append(svar)
     
@@ -189,7 +196,7 @@ def detect_paused(self):
     """
     Before Functions: detect_owners_bwList
     搜索所有的 paused
-    paused 符合以下特点，出现在 tranfer 的 require 中（没有 local variables 出现在 require 中），bool 类型，只有 owner 可以修改
+    paused 符合以下特点，出现在 tranfer 的 condition 中（没有 local variables 出现在 condition 中），bool 类型，只有 owner 可以修改
     """
     paused_candidates = []
     for svar in self.state_vars_user_only_read_owner_updated:
@@ -198,8 +205,8 @@ def detect_paused(self):
 
     paused = []
     for svar in list(set(paused_candidates)):
-        funcs_sigs = [f.function.full_name for f in self.state_var_read_in_require_functions_dict[svar] ]
-        if len(set(funcs_sigs) & set(self.token_write_function_sigs)) > 0: # 如果变量 require function 出现在 token 写函数中
+        funcs_sigs = [f.function.full_name for f in self.state_var_read_in_condition_functions_dict[svar] ]
+        if len(set(funcs_sigs) & set(self.token_write_function_sigs)) > 0: # 如果变量 condition function 出现在 token 写函数中
             paused.append(svar)
     
     self.label_svars_dict.update({'paused':paused})
@@ -279,7 +286,7 @@ def detect_lack_event_functions(self):
     lack_event_user_functions = []
     for f in self.state_var_written_functions:
         if not f.is_constructor_or_initializer and len(f.events) == 0:
-            if f in self.owner_in_require_functions:
+            if f in self.owner_in_condition_functions:
                 lack_event_owner_functions.append(f)
             else:
                 lack_event_user_functions.append(f)

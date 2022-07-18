@@ -3,7 +3,7 @@ from slither.core.declarations import Contract
 from slither.core.variables.state_variable import StateVariable
 
 from .function_exp import FunctionExp
-from .require_exp import RequireExp
+from .condition_exp import ConditionNode
 from naga.core.erc import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_WRITE_FUNCS_SIG)
 
 import json
@@ -92,7 +92,7 @@ class ContractExp():
         self._dividing_functions()
 
         self.detect_owners_bwList()
-        self._owner_in_require_functions = None
+        self._owner_in_condition_functions = None
 
         self._divde_state_vars() # After detect_owners_bwList
 
@@ -142,8 +142,8 @@ class ContractExp():
         self.state_var_read_functions: List["FunctionExp"] = []
         self.state_var_written_functions_dict:Dict("StateVariable",["FunctionExp"]) = dict()
         self.state_var_read_functions_dict:Dict("StateVariable",["FunctionExp"]) = dict()
-        self.state_var_read_in_require_functions_dict: Dict("StateVariable",["FunctionExp"]) = dict()
-        self.state_var_read_in_requires_dict: Dict("StateVariable",["RequireExp"]) = dict()
+        self.state_var_read_in_condition_functions_dict: Dict("StateVariable",["FunctionExp"]) = dict()
+        self.state_var_read_in_conditions_dict: Dict("StateVariable",["ConditionNode"]) = dict()
         self.all_state_vars: List["StateVariable"] = []
 
         # Functions defined in the token contract
@@ -169,8 +169,8 @@ class ContractExp():
         for f in self.functions:
             for svar in f.function.all_state_variables_written() + f.function.all_state_variables_read():
                 all_state_vars.append(svar)
-            for exp_req in f.requires:
-                for svar in exp_req.all_read_vars_group.state_vars:
+            for cond in f.conditions:
+                for svar in cond.all_read_vars_group.state_vars:
                     all_state_vars.append(svar)
 
         self.all_state_vars = list(set(all_state_vars))
@@ -178,8 +178,8 @@ class ContractExp():
         for s in self.all_state_vars:
             self.state_var_written_functions_dict[s] = []
             self.state_var_read_functions_dict[s] = []
-            self.state_var_read_in_requires_dict[s] = []
-            self.state_var_read_in_require_functions_dict[s] = []
+            self.state_var_read_in_conditions_dict[s] = []
+            self.state_var_read_in_condition_functions_dict[s] = []
 
         for f in self.functions:
             for svar in f.function.all_state_variables_written():
@@ -187,14 +187,14 @@ class ContractExp():
             for svar in f.function.all_state_variables_read():
                 self.state_var_read_functions_dict[svar].append(f)
 
-            for exp_req in f.requires:
-                #print(exp_req)
-                for svar in exp_req.all_read_vars_group.state_vars:
-                    self.state_var_read_in_requires_dict[svar].append(exp_req)
-                    self.state_var_read_in_require_functions_dict[svar].append(f)
+            for cond in f.conditions:
+                #print(cond)
+                for svar in cond.all_read_vars_group.state_vars:
+                    self.state_var_read_in_conditions_dict[svar].append(cond)
+                    self.state_var_read_in_condition_functions_dict[svar].append(f)
             
-            for svar, value in self.state_var_read_in_require_functions_dict.items():
-                self.state_var_read_in_require_functions_dict[svar] = list(set(value))
+            for svar, value in self.state_var_read_in_condition_functions_dict.items():
+                self.state_var_read_in_condition_functions_dict[svar] = list(set(value))
 
     def get_function_from_signature(self, function_signature):
         """
@@ -208,17 +208,17 @@ class ContractExp():
     '''
     def _update_function_owners(self):
         for owner in self.owners:
-            for f in self.state_var_read_in_require_functions_dict[owner]:
+            for f in self.state_var_read_in_condition_functions_dict[owner]:
                 f.owners.append(owner)
     '''
     @property
-    def owner_in_require_functions(self):
-        if self._owner_in_require_functions is None:
-            owner_in_require_functions = []
+    def owner_in_condition_functions(self):
+        if self._owner_in_condition_functions is None:
+            owner_in_condition_functions = []
             for svar in self.label_svars_dict['owners']:
-                owner_in_require_functions += self.state_var_read_in_require_functions_dict[svar]
-            self._owner_in_require_functions = list(set(owner_in_require_functions))
-        return self._owner_in_require_functions
+                owner_in_condition_functions += self.state_var_read_in_condition_functions_dict[svar]
+            self._owner_in_condition_functions = list(set(owner_in_condition_functions))
+        return self._owner_in_condition_functions
 
     def _divde_state_vars(self):
 
@@ -238,7 +238,7 @@ class ContractExp():
             svars = f.function.all_state_variables_read()
             svars_read += svars
             if f.is_constructor_or_initializer: continue
-            if f in self.owner_in_require_functions: svars_owner_read += svars
+            if f in self.owner_in_condition_functions: svars_owner_read += svars
             else: svars_user_read += svars
         svars_read = list(set(svars_read))
         svars_user_read = list(set(svars_user_read))
@@ -248,7 +248,7 @@ class ContractExp():
             svars = f.function.all_state_variables_written()
             svars_written += svars
             if f.is_constructor_or_initializer: continue
-            if f in self.owner_in_require_functions: svars_owner_updated += svars
+            if f in self.owner_in_condition_functions: svars_owner_updated += svars
             else: svars_user_written += svars
         svars_written = list(set(svars_written))
         svars_user_written = list(set(svars_user_written))
@@ -281,14 +281,14 @@ class ContractExp():
 
         for rf in self.state_var_read_functions_dict[state_var]:
             if rf.is_constructor_or_initializer: continue
-            if rf in self.owner_in_require_functions:
+            if rf in self.owner_in_condition_functions:
                 functions_owner_read.append(rf)
             else:
                 functions_user_read.append(rf)
 
         for wf in self.state_var_written_functions_dict[state_var]:
             if wf.is_constructor_or_initializer: continue
-            if wf in self.owner_in_require_functions:
+            if wf in self.owner_in_condition_functions:
                 functions_owner_written.append(wf)
             else:
                 functions_user_written.append(wf)

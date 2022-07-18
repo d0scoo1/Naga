@@ -5,3 +5,4 @@ tests/old/*
 crytic-export/*
 analysis/*
 tools/*
+naga/core copy/

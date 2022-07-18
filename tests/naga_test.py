@@ -247,7 +247,7 @@ def test_one(erc_force= 'erc20'):
             line = fr.readline()
 
     for c in contracts_info:
-        if c['address'] == '0xdef1fac7bf08f173d286bbbdcbeeade695129840'[:42]:
+        if c['address'] == '0x950b9476a4de757bb134483029ac4ec17e739e3a_naga_error'[:42]:
             contract  ={
             'address': c['address'],
             'name': c['name'],
@@ -267,18 +267,25 @@ def test_one(erc_force= 'erc20'):
     nagac = ng._naga_test(slither)
     for f in nagac.functions:
         if f.function.name == 'pauseContract':
-            print(f.if_statements)
-            print(f.requires)
-            for n in f.requires:
-                print(n)
-
-
-
+            print(f.conditions)
+            
 
 if __name__ == "__main__":
     #start('erc20')
     #start('erc721')
     #start('erc1155')
-    #start('mainnet')
-    test_one()
+    start('mainnet')
+    #test_one('erc721')
     pass
+'''
+0xbd8a2888c882181a9fa16ca367b77b5f3b8f7556
+0xc17030798a6d6e1a76382cf8f439182eb0342d93
+0x003ed3a4e2e9a4a91a56dc2adccb9d23cc0e3851
+0x8c38d2b4576b23ac11435011baa5e0ed17447e87
+0x11ab0243c57c6c1b39f2908aaebaed7ccf351491
+0xce69a87c02baa8c5f17ed7eb8b1c2657afc2e1af
+0xf6e4560ddd34850a899144e02ddfc9ae38663e84
+0xfd7a881e94f157a1721938777644ea0f0d89b498
+0x8f55deaad9f4ae34734e2dbc6b77ace6e564c3f7
+0xf5680935caf59a90b4a4d84c7ac328e1901eb9f9
+'''
