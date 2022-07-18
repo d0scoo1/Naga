@@ -79,12 +79,11 @@ def detect_modifier_owners(self):
             all_modifier_owners+=m.all_state_variables_read()
             self.onlyRole_modifiers.append(m)
 
-    all_modifier_owners = list(set(all_modifier_owners))
-    self.all_modifier_owners = all_modifier_owners
+    self.all_modifier_owners = list(set(all_modifier_owners))
 
     modifier_owners_used = []
     modifier_owners_unused = []
-    for svar in all_modifier_owners:
+    for svar in self.all_modifier_owners:
         if not is_owner_type(svar):
             continue
         if len(self.state_var_read_in_condition_functions_dict[svar]) > 0:
@@ -126,7 +125,7 @@ def detect_owners_bwList(self):
     
     # 检查每个 owner_candidate 依赖的 owner 是否也属于 owner_candidate
     # 首先找出自我依赖的，然后检查剩余的是否依赖于自我依赖
-    owners_1 = self.modifier_owners_used
+    owners_1 = [sv for sv in self.modifier_owners_used]
     owner_candidates = list(set(owner_candidates)-set(owners_1))
     for svar in owner_candidates:
         # 检查是否存在自我依赖：owner 的写函数是 owner in condition functions 的子集 (上一步中，我们已经确定每个 owner 的写函数都被 owner_candidates 约束)
@@ -181,8 +180,6 @@ def detect_owners_bwList(self):
         #if isinstance(svar.type, MappingType) and svar.type.type_from == ElementaryType('address') and svar.type.type_to == ElementaryType('bool'):
         if svar in mapping_owners:
             bwList.append(svar)
-
-
 
     self.label_svars_dict.update({
         'owners':list(set(owners)-set(bwList)),

@@ -6,3 +6,4 @@ crytic-export/*
 analysis/*
 tools/*
 naga/core copy/
+tests/run_naga_test.py
