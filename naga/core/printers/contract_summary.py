@@ -86,22 +86,22 @@ def contract_summary(self):
         'erc_svars':{},
         'erc_svars_rw':{},
         'svar_user_owner_rw':{ # user_read,user_write,owner_read,owner_write
-            '0000':0,
-            '0001':0, #
-            '0010':0,
-            '0011':0, #
-            '0100':0,
-            '0101':0, #
-            '0110':0,
-            '0111':0, #
-            '1000':0,
-            '1001':0, #
-            '1010':0,
-            '1011':0, #
-            '1100':0,
-            '1101':0, #
-            '1110':0,
-            '1111':0, #
+            '0000':[],
+            '0001':[], #
+            '0010':[],
+            '0011':[], #
+            '0100':[],
+            '0101':[], #
+            '0110':[],
+            '0111':[], #
+            '1000':[],
+            '1001':[], #
+            '1010':[],
+            '1011':[], #
+            '1100':[],
+            '1101':[], #
+            '1110':[],
+            '1111':[], #
         },
         'functions': [],
         'all_modifier_owners':[],
@@ -114,8 +114,8 @@ def contract_summary(self):
         'lack_event_user_erc_svars':{},
         'lack_event_owner_erc_svars':{},
         'l_e_f_rw':{
-            '0000':0,'0001':0, '0010':0,'0011':0, '0100':0,'0101':0, '0110':0,'0111':0, 
-            '1000':0,'1001':0, '1010':0,'1011':0, '1100':0,'1101':0, '1110':0,'1111':0, 
+            '0000':[],'0001':[], '0010':[],'0011':[], '0100':[],'0101':[], '0110':[],'0111':[], 
+            '1000':[],'1001':[], '1010':[],'1011':[], '1100':[],'1101':[], '1110':[],'1111':[], 
         }
     }
 
@@ -181,33 +181,33 @@ def contract_summary(self):
     summary['erc_svars_rw'] = svar_rw_summary
 
     for svar in summary['state_variables']: # 统计每种读写情况出现的次数
-        summary['svar_user_owner_rw'][svar['rw']] += 1
+        summary['svar_user_owner_rw'][svar['rw']].append(svar['name'])
 
     lack_event_user_erc_svars = dict() # 查找用户是写了什么变量
     lack_event_owner_erc_svars = dict() # 检查 owner 写了什么变量没有提示
     for svar_label in get_common_labels() + get_svar_labels():
-        lack_event_user_erc_svars[svar_label] = 0
-        lack_event_owner_erc_svars[svar_label] = 0
-    lack_event_user_erc_svars['no_label'] = 0
-    lack_event_owner_erc_svars['no_label'] = 0
+        lack_event_user_erc_svars[svar_label] = []
+        lack_event_owner_erc_svars[svar_label] = []
+    lack_event_user_erc_svars['no_label'] = []
+    lack_event_owner_erc_svars['no_label'] = []
     for f in self.lack_event_user_functions:
         for svar in f.function.all_state_variables_written():
             if svar in self.svar_label_dict: 
-                lack_event_user_erc_svars[self.svar_label_dict[svar]] += 1
-            else: lack_event_user_erc_svars['no_label'] += 1
+                lack_event_user_erc_svars[self.svar_label_dict[svar]].append({"function":f.function.full_name, "svar":svar.name})
+            else: lack_event_user_erc_svars['no_label'].append({"function":f.function.full_name, "svar":svar.name})
     for f in self.lack_event_owner_functions:
         for svar in f.function.all_state_variables_written():
             if svar in self.svar_label_dict:
-                lack_event_owner_erc_svars[self.svar_label_dict[svar]] += 1
+                lack_event_owner_erc_svars[self.svar_label_dict[svar]].append({"function":f.function.full_name, "svar":svar.name})
             else:
-                lack_event_owner_erc_svars['no_label'] += 1
+                lack_event_owner_erc_svars['no_label'].append({"function":f.function.full_name, "svar":svar.name})
     lack_event_owner_erc_svars['owners'] = lack_event_owner_erc_svars['owners_1'] + lack_event_owner_erc_svars['owners_2'] + lack_event_owner_erc_svars['owners_3']
     summary['lack_event_user_erc_svars'] = lack_event_user_erc_svars
     summary['lack_event_owner_erc_svars'] = lack_event_owner_erc_svars
     
     for f in self.lack_event_functions:
         for svar in f.function.all_state_variables_written():
-            summary['l_e_f_rw'][self.svar_rw_dict[svar]] += 1
+            summary['l_e_f_rw'][self.svar_rw_dict[svar]].append({"function":f.function.full_name, "svar":svar.name})
 
     info_summary =  self.info # add info to summary
     info_summary.update(summary)
