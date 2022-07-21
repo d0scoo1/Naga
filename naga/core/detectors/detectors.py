@@ -95,6 +95,17 @@ def detect_modifier_owners(self):
     self.modifier_owners_used = modifier_owners_used
     self.modifier_owners_unused = modifier_owners_unused
 
+    #update_roles(self)
+'''
+def update_roles(self):
+    """
+    如果 roles 存在，则更新所有的 roles 相关 byte 为 owner.
+    """
+    roles = [svar for m in self.onlyRole_modifiers for svar in m.all_state_variables_read() if is_owner_type(svar)]
+    for r in roles:
+        print(r)
+'''
+
 def detect_owners_bwList(self):
     """
     Search owners, black list, white list.
@@ -220,15 +231,23 @@ def _search_one_state_var_in_return(self, f_sig:str, type_str:str, svar_lower_na
 
     candidates = []
     if func is not None:
-        candidates = [svar for svar in func.return_var_group.state_vars if str(svar.type).startswith(type_str)]
-        if len(candidates) == 1:
-            return [candidates[0]]
+        candidates = [svar for svar in func.return_var_group.state_vars]
+        if candidates != []:
+            return candidates
 
-    for svar in candidates + self.all_state_vars:
+    for svar in self.all_state_vars:
+        if svar.name.lower().replace('_','') == svar_lower_names[0]:
+            return [svar]
         for name in svar_lower_names:
             if name in svar.name.lower():
-                return [svar]
-    return []
+                candidates.append(svar)
+    candidates = list(set(candidates))
+    if len(candidates) > 1:
+        """
+        直接匹配类型最相近，如果都相近，则全都返回
+        """
+        candidates = [svar for svar in candidates if str(svar.type).startswith(type_str)]
+    return candidates
 
 """
     Search common state variables in the ERC 20 721 1155
