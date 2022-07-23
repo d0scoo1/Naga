@@ -231,7 +231,7 @@ def _search_one_state_var_in_return(self, f_sig:str, type_str:str, svar_lower_na
 
     candidates = []
     if func is not None:
-        candidates = [svar for svar in func.return_var_group.state_vars]
+        candidates = [svar for svar in func.return_var_group.state_vars if str(svar.type).startswith(type_str)]
         if candidates != []:
             return candidates
 
