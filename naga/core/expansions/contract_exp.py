@@ -216,7 +216,9 @@ class ContractExp():
         if self._owner_in_condition_functions is None:
             owner_in_condition_functions = []
             for svar in self.label_svars_dict['owners']:
-                owner_in_condition_functions += self.state_var_read_in_condition_functions_dict[svar]
+                for f in self.state_var_read_in_condition_functions_dict[svar]:
+                    if svar in f.owner_candidates: # owner 必须是用于 owner 的
+                        owner_in_condition_functions.append(f)
             self._owner_in_condition_functions = list(set(owner_in_condition_functions))
         return self._owner_in_condition_functions
 

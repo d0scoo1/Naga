@@ -84,7 +84,7 @@ class FunctionExp():
         for node in self.all_require_nodes:
             self._require_conditions += get_require(node)
         return self._require_conditions
-    
+
     @property
     def if_conditions(self) -> List["ConditionNode"]:
         if self._if_conditions is None:
@@ -95,8 +95,11 @@ class FunctionExp():
 
     @property
     def conditions(self) -> List["ConditionNode"]:
+        '''
+        IF condition 由于语义问题，会带来大量的假阳性，所以我们不考虑 IF condition
+        '''
         if self._conditions is None:
-            self._conditions = self.require_conditions + self.if_conditions
+            self._conditions = self.require_conditions # + self.if_conditions
         return self._conditions
 
     @property
