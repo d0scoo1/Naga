@@ -12,7 +12,8 @@ def _get_condition_depVars(node:Node,msg:str) -> List:
     The condition statement could have more than one condition, connected by AND &&, which is equal to multiple requires.
     We divide the requires into multiple requires by &&.
     '''
-
+    #if str(node) != 'EXPRESSION require(bool)(_to != address(0))': return []
+    
     if node.irs_ssa == []:
         return []
     read_vars = node.irs_ssa[-1].read
@@ -30,6 +31,7 @@ def _get_condition_depVars(node:Node,msg:str) -> List:
     if len(r_node_conds) == 0:
         r_node_conds = [read_vars[0]] # 如果没有 && 条件，则直接使用最后一个 ir 的 read 作为 require
     #print('r_node_conds',','.join([str(v) for v in r_node_conds]))
+    #for c in [ConditionNode(node, rnc, msg) for rnc in r_node_conds]: print(c)
     return [ConditionNode(node, rnc, msg) for rnc in r_node_conds]
 
 def get_require(node:Node) -> List:

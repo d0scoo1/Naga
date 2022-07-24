@@ -1,6 +1,7 @@
 
+from tempfile import tempdir
 from typing import List
-from slither.core.cfg.node import Node
+from slither.core.cfg.node import Node,NodeType
 from .variable_group import (VariableGroup,var_group_combine)
 from slither.slithir.operations import (
     HighLevelCall,Index,InternalCall,EventCall,Length,LibraryCall,LowLevelCall,Member,OperationWithLValue,Phi,PhiCallback,SolidityCall,Return,Operation,Condition,Transfer)
@@ -20,12 +21,23 @@ def node_track(node, tainted_vars = None):
     '''
     Track all relevant variables of a node.
     '''
-    nodes = node.function.nodes
-    while nodes:
-        if node == nodes.pop(): break
-    nodes.append(node)
 
-    irs = [ir for node in nodes for ir in node.irs_ssa]
+    # 删掉下面无关的变量
+    candidate_dominators = node.function.nodes
+    while candidate_dominators:
+        if node == candidate_dominators.pop(): break
+    candidate_dominators.append(node)
+    
+    dominators = []
+    while candidate_dominators:
+        temp_node = candidate_dominators.pop()
+        if temp_node.type == NodeType.ENTRYPOINT:
+            continue  # ENTRYPOINT 会引入一个变量所有的依赖，影响追踪，因此需要去掉删掉
+        dominators.append(temp_node)
+    dominators.reverse()
+
+    irs = [ir for node in dominators for ir in node.irs_ssa]
+
     if tainted_vars is not None: tainted_vars = [[c] for c in tainted_vars]
     dep_irs_ssa = irs_ssa_track(irs,tainted_vars,set())
 
@@ -53,10 +65,10 @@ def irs_ssa_track(irs, tainted_vars, walked_functions):
     else:
         tainted_ir = irs.pop()
 
-    #from_functions = set()
-    #from_functions.add(tainted_ir.function.full_name)
+    #print('tainted_ir',tainted_ir)
     while irs:
         ir = irs.pop()
+        #print("irs_ssa_track: {}".format(ir))
         if isinstance(ir,NO_LEFT_VALUE_OPERATIONS): #,PhiCallback,SolidityCall,LibraryCall,LowLevelCall,HighLevelCall
             continue
         try:
@@ -70,6 +82,7 @@ def irs_ssa_track(irs, tainted_vars, walked_functions):
             rval = internalCall_track(ir,walked_functions) # internalCall_track 返回的是一个 [[],[]] 需要转换为 []
         else:
             rval = ir.read
+        #print("     lval: {}, rval {}".format(lval,','.join(str(r) for r in rval)))
 
         # 找到 tainted_vars 中的 lval，使用 rval 替换
         for tvs in tainted_vars:
@@ -84,6 +97,7 @@ def irs_ssa_track(irs, tainted_vars, walked_functions):
             if exisited:
                 tvs.pop(t_index) # 删掉旧值
                 tvs += rval # 替换
+        #print("     tainted_vars: {}".format(','.join(str(r) for r in tainted_vars[0])))
     return tainted_vars
 
 
