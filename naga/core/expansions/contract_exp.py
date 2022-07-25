@@ -222,15 +222,7 @@ class ContractExp():
                     if svar in f.owner_candidates: 
                         owner_in_condition_functions.append(f)
                     #检查 owner 是否在 || condition 中，如果在检查条件中，检查是否都为 owner
-                    
-                    '''
-                    if svar not in f.owner_candidates: 
-                        continue
-                    for cond in f.exist_oror_conditions:
-                        if len(cond.all_read_vars_group.local_vars) < 0 and SolidityVariableComposed('msg.sender') in self.all_read_vars_group.solidity_vars and set(cond.all_read_vars_group.state_vars) - owners_set == set():
-                            owner_in_condition_functions.append(f)
-                            break
-                    '''
+                    # pass
             self._owner_in_condition_functions = list(set(owner_in_condition_functions))
         return self._owner_in_condition_functions
 
