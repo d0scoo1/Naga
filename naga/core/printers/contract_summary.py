@@ -136,12 +136,13 @@ def contract_summary(self):
     for f in self.functions:
         f_summary = {
             'name': f.function.full_name,
+            'owner_in_condition': f in self.owner_in_condition_functions,
             #'parameters':f.function.parameters,
             'state_variables_read':[svar.name for svar in f.function.all_state_variables_read()],
             'state_variables_written': [svar.name for svar in f.function.all_state_variables_written()],
             'solidity_variables_read':[svar.name for svar in f.function.all_solidity_variables_read()],
             'conditions': [r._print() for r in f.conditions],
-            'owner_in_condition': f in self.owner_in_condition_functions,
+            
         }
         summary['functions'].append(f_summary)
 

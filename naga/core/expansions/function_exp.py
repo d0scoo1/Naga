@@ -101,6 +101,14 @@ class FunctionExp():
         if self._conditions is None:
             self._conditions = self.require_conditions # + self.if_conditions
         return self._conditions
+    
+    @property
+    def exist_oror_conditions(self) -> List["ConditionNode"]:
+        exist_oror_conditions = []
+        for condition in self.conditions:
+            if condition.exist_oror:
+                exist_oror_conditions.append(condition)
+        return exist_oror_conditions
 
     @property
     def owner_candidates(self) -> List["Variable"]:

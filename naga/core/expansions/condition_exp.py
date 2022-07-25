@@ -62,6 +62,11 @@ class ConditionNode(NodeExp):
         super().__init__(node,tainted_vars = [self.condition_read])
         self.owner_candidates = self._get_owner_candidates()
     
+    def exist_oror(self):
+        for ir in self.node.irs_ssa:
+            if isinstance(ir,Binary) and ir.type == BinaryType.OROR:
+                return True
+
     def _get_owner_candidates(self):
         """
         如果 all_read_vars_group 中 local_vars 为空，state_vars 中有 address 或 mapping(address => bool)，且 solidity_vars 中存在一个 msg.sender，则我们认为它可能是 owner
