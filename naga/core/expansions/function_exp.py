@@ -98,6 +98,7 @@ class FunctionExp():
         '''
         IF condition 由于语义问题，会带来大量的假阳性，所以我们不考虑 IF condition
         '''
+        
         if self._conditions is None:
             self._conditions = self.require_conditions # + self.if_conditions
         return self._conditions

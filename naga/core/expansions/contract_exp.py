@@ -4,7 +4,7 @@ from slither.core.variables.state_variable import StateVariable
 
 from .function_exp import FunctionExp
 from .condition_exp import ConditionNode
-from naga.core.erc import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_WRITE_FUNCS_SIG)
+from naga.core.openzeppelin import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_WRITE_FUNCS_SIG)
 from slither.core.declarations import SolidityVariableComposed
 import json
 
@@ -83,57 +83,45 @@ class ContractExp():
     #######################################
 
     from naga.core.detectors import (
-        detect_owners_bwList,detect_paused,
-        detect_erc20_state_vars,detect_erc721_state_vars,detect_erc1155_state_vars,detect_lack_event_functions,)
+        init_detect,
+        detect_owners,detect_paused,
+        detect_erc_state_vars,
+        detect_lack_event_functions,)
 
+    
     def _before_detect_erc_svars(self):
-        self.label_svars_dict = dict() # Mapping from label to state variables
-
         self._dividing_functions()
 
-        self.detect_owners_bwList()
-        self._owner_in_condition_functions = None
+        self.init_detect()
+        self.detect_owners()
 
         self._divde_state_vars() # After detect_owners_bwList
-
         self.detect_paused()
 
     def _after_detect_erc_svars(self):
         #self.detect_unfair_settings()
         self.detect_lack_event_functions()
-        self._svar2label()
-        self._svar_rw_dict = None
-        self._summary = None
-        self._summary_csv = None
+
+
+        #self._svar2label()
+        #self._svar_rw_dict = None
+        #self._summary = None
+        #self._summary_csv = None
 
     def detect(self,erc_force = None):
         self.erc_force = erc_force
+        
+        self._before_detect_erc_svars()
+
         if erc_force is not None:
-            if erc_force == 'erc20':
-                self.detect_erc20()
-            elif erc_force == 'erc721':
-                self.detect_erc721()
-            elif erc_force == 'erc1155':
-                self.detect_erc1155()
+            self.detect_erc_state_vars(erc_force)
         else:
-            if self.is_erc20: self.detect_erc20()
-            elif self.is_erc721: self.detect_erc721()
-            elif self.is_erc1155: self.detect_erc1155()
+            if self.is_erc20: self.detect_erc_state_vars('erc20')
+            elif self.is_erc721: self.detect_erc_state_vars('erc721')
+            elif self.is_erc1155: self.detect_erc_state_vars('erc1155')
 
-    def detect_erc20(self):
-        self._before_detect_erc_svars()
-        self.detect_erc20_state_vars()
         self._after_detect_erc_svars()
 
-    def detect_erc721(self):
-        self._before_detect_erc_svars()
-        self.detect_erc721_state_vars()
-        self._after_detect_erc_svars()
-
-    def detect_erc1155(self):
-        self._before_detect_erc_svars()
-        self.detect_erc1155_state_vars()
-        self._after_detect_erc_svars()
 
     def _dividing_functions(self):
 
@@ -211,20 +199,8 @@ class ContractExp():
             for f in self.state_var_read_in_condition_functions_dict[owner]:
                 f.owners.append(owner)
     '''
-    @property
-    def owner_in_condition_functions(self):
-        if self._owner_in_condition_functions is None:
-            owner_in_condition_functions = []
-            owners_set = set(self.label_svars_dict['owners'])
-            for svar in self.label_svars_dict['owners']:
-                for f in self.state_var_read_in_condition_functions_dict[svar]:
-                    # 检查 owner 是否在 candidate 中
-                    if svar in f.owner_candidates: 
-                        owner_in_condition_functions.append(f)
-                    #检查 owner 是否在 || condition 中，如果在检查条件中，检查是否都为 owner
-                    # pass
-            self._owner_in_condition_functions = list(set(owner_in_condition_functions))
-        return self._owner_in_condition_functions
+
+    
 
     def _divde_state_vars(self):
 
@@ -342,7 +318,7 @@ class ContractExp():
                     'is_owner_written': len(fs_o_w) > 0,
                 }
         """
-
+    '''
     from naga.core.printers import contract_summary, contract_summary2csv
     @property
     def summary(self):
@@ -350,13 +326,16 @@ class ContractExp():
             self._summary = self.contract_summary()
         return self._summary
     
+    
+    
+    def summary_csv(self):
+        return self.contract_summary2csv()
+    '''
     def summary_json(self,output_file=None):
+        return
         summary_json = json.dumps(self.summary,indent=4)
         if output_file is not None:
             with open(output_file,'w') as f:
                 f.write(summary_json)
             f.close()
         return summary_json
-    
-    def summary_csv(self):
-        return self.contract_summary2csv()

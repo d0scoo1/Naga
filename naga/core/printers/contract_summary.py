@@ -59,7 +59,7 @@
 }
 """
 
-from naga.core.erc import (ERC20_STATE_VARIAVLES, ERC721_STATE_VARIAVLES, ERC1155_STATE_VARIAVLES)
+from naga.core.openzeppelin import (ERC20_STATE_VARIAVLES, ERC721_STATE_VARIAVLES, ERC1155_STATE_VARIAVLES)
 
 def get_common_labels():
     return ['owners', 'owners_1','owners_2','owners_3', 'bwList', 'paused']
@@ -128,8 +128,8 @@ def contract_summary(self):
             'rw':self.svar_rw_dict[svar]
         }
         
-        if svar in self.svar_label_dict:
-            svar_summary['label'] = self.svar_label_dict[svar]
+        #if svar in self.svar_label_dict:
+            #svar_summary['label'] = self.svar_label_dict[svar]
 
         summary['state_variables'].append(svar_summary)
 

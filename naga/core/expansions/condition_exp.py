@@ -12,7 +12,8 @@ def _get_condition_depVars(node:Node,msg:str) -> List:
     The condition statement could have more than one condition, connected by AND &&, which is equal to multiple requires.
     We divide the requires into multiple requires by &&.
     '''
-    #if str(node) != 'EXPRESSION require(bool)(_to != address(0))': return []
+    #if node.function.full_name != 'safeTransferFrom(address,address,uint256,uint256,bytes)': return []
+    #if str(node) != 'EXPRESSION require(bool,string)(isApprovedForAll(from,_msgSender()),ERC1155: caller is not owner nor approved)': return []
     
     if node.irs_ssa == []:
         return []

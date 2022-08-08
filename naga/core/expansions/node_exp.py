@@ -28,15 +28,21 @@ def node_track(node, tainted_vars = None):
         if node == candidate_dominators.pop(): break
     candidate_dominators.append(node)
     
-    dominators = []
+    # ENTRYPOINT 会引入一个变量所有的依赖，影响追踪，因此需要去掉删掉
+    dominators = [n for n in candidate_dominators if n.type != NodeType.ENTRYPOINT] 
+    '''
     while candidate_dominators:
         temp_node = candidate_dominators.pop()
         if temp_node.type == NodeType.ENTRYPOINT:
-            continue  # ENTRYPOINT 会引入一个变量所有的依赖，影响追踪，因此需要去掉删掉
+            continue  
         dominators.append(temp_node)
     dominators.reverse()
+    '''
 
     irs = [ir for node in dominators for ir in node.irs_ssa]
+    #print()
+    #print("node_track: {}".format(node))
+    #for ir in irs: print(ir)
 
     if tainted_vars is not None: tainted_vars = [[c] for c in tainted_vars]
     dep_irs_ssa = irs_ssa_track(irs,tainted_vars,set())
@@ -68,7 +74,7 @@ def irs_ssa_track(irs, tainted_vars, walked_functions):
     #print('tainted_ir',tainted_ir)
     while irs:
         ir = irs.pop()
-        #print("irs_ssa_track: {}".format(ir))
+        # print("irs_ssa_track: {}".format(ir))
         if isinstance(ir,NO_LEFT_VALUE_OPERATIONS): #,PhiCallback,SolidityCall,LibraryCall,LowLevelCall,HighLevelCall
             continue
         try:
@@ -105,7 +111,7 @@ def internalCall_track(t_ir,walked_functions):
     """
         from_function: 防止循环调用
     """
-    irs = [ir for n in t_ir.function.nodes for ir in n.irs_ssa] # all_nodes()
+    irs = [ir for n in t_ir.function.nodes for ir in n.irs_ssa if n.type != NodeType.ENTRYPOINT] # all_nodes()
     if len(irs) == 0: return [] # 由于后面使用了 sum([[]],[]),所以这里必须返回二维数组
     rvals = []
     index = 0
