@@ -99,7 +99,7 @@ def _detect_owner_modifiers(self):
     for svar in all_onlyRole_svars:
         if not _is_owner_type(svar):
             continue
-        _set_state_vars_label(self,'roles',[svar])
+        _set_state_vars_label(self,'role',[svar])
         self.only_modifiers_detected_owners.append(svar)
 
 from slither.core.declarations import SolidityVariableComposed
@@ -140,16 +140,17 @@ def detect_owners(self):
     #for c in all_candidates: print(c)
     # 去掉 inheritance 和 modifier 中检测到的 owner
     owner_candidates = _get_no_label_svars(self,list(set(owner_candidates)))
-    
+    #for v in owner_candidates: print('[*] Detecting owner of {}'.format(v.name))
     '''
      查找 owner, 如果 candidate 的写函数不是 constructor，则需要存在一个require，其中读取了 变量自己 或 另一个 owner ，并且读取了 msg.sender
     '''
     owners = _get_label_svars(self,'owner') + _get_label_svars(self,'role')
-    max_deep = len(owner_candidates) # 最差情况下，每个owner 都互相依赖，且我们每次只能检出一个 owner
+    max_deep = (len(owner_candidates) + 1) * len(owner_candidates) / 2 + 1 # 最差情况下，每个owner 都互相依赖，且我们每次只能检出一个 owner
     now_deep = 0
-    while len(owner_candidates) > 0 and now_deep < max_deep:
+    while len(owner_candidates) > 0 and now_deep <= max_deep:
         now_deep += 1
         svar = owner_candidates.pop(0)
+        #print('[{}] Detecting owner of {}'.format(now_deep,svar.name))
         if _is_owner(svar,owners,self.state_var_written_functions_dict[svar]):
             _set_state_vars_label(self,'owner',[svar])
             owners.append(svar)

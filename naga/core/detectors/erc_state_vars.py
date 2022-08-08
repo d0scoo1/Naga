@@ -29,6 +29,11 @@ ERC1155_STATE_VARIAVLES = [
     ('totalSupply','totalSupply()', 'mapping(uint256 => uint256)', ['totalsupply','supply'])
 ]
 
+exclude_stateVaribles = [
+    # type,name
+    ('bytes16','_HEX_SYMBOLS')
+]
+
 
 def _search_state_var_in_return(self, f_sig:str, type_str:str, svar_lower_names:List[str]) -> StateVariable:
     """ 
@@ -47,6 +52,13 @@ def _search_state_var_in_return(self, f_sig:str, type_str:str, svar_lower_names:
             return candidates
 
     for svar in self.all_state_vars:
+        if any(
+            svar
+            for esvar in exclude_stateVaribles
+            if str(svar.type).startswith(esvar[0]) and svar.name == esvar[1] 
+        ):
+            continue
+        
         if svar.name.lower().replace('_','') == svar_lower_names[0]:
             return [svar]
         for name in svar_lower_names:
