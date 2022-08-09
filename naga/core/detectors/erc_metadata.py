@@ -35,7 +35,6 @@ exclude_stateVaribles = [
     ('bytes16','_HEX_SYMBOLS')
 ]
 
-
 def _search_state_var_in_return(self, f_sig:str, type_str:str, svar_lower_names:List[str]) -> StateVariable:
     """ 
     查找 return 中的返回值
@@ -50,6 +49,7 @@ def _search_state_var_in_return(self, f_sig:str, type_str:str, svar_lower_names:
     if func is not None:
         candidates = [svar for svar in func.return_var_group.state_vars if str(svar.type).startswith(type_str)]
         if candidates != []:
+            self.detect_erc_state_vars_by_return += candidates
             return candidates
 
     for svar in self.all_state_vars:
@@ -61,6 +61,7 @@ def _search_state_var_in_return(self, f_sig:str, type_str:str, svar_lower_names:
             continue
         
         if svar.name.lower().replace('_','') == svar_lower_names[0]:
+            self.detect_erc_state_vars_by_name.append(svar)
             return [svar]
         for name in svar_lower_names:
             if name in svar.name.lower():
@@ -71,6 +72,7 @@ def _search_state_var_in_return(self, f_sig:str, type_str:str, svar_lower_names:
         直接匹配类型最相近，如果都相近，则全都返回
         """
         candidates = [svar for svar in candidates if str(svar.type).startswith(type_str)]
+        self.detect_erc_state_vars_by_name += candidates
     return candidates
 
 """
@@ -83,6 +85,11 @@ def _detect_erc_state_vars(self, erc_state_vars):
         _set_state_vars_label(self,v[0],svars)
 
 def detect_erc_state_vars(self,erc):
+    '''
+    There are two methods to detect the state variables of ERC, one is to search the return of the function, the other is to search the state variables of name string.
+    '''
+    self.detect_erc_state_vars_by_return = []
+    self.detect_erc_state_vars_by_name = []
     if erc == 'erc20':
         _detect_erc_state_vars(self,ERC20_STATE_VARIAVLES)
     elif erc == 'erc721':

@@ -102,11 +102,8 @@ class ContractExp():
 
     def detect(self,erc_force = None):
         self.erc_force = erc_force
-        erc = erc_force
-        if erc_force is None:
-            if self.is_erc20: erc = 'erc20'
-            elif self.is_erc721: erc = 'erc721'
-            elif self.is_erc1155: erc = 'erc1155'
+        erc = self.get_erc_str
+        if erc_force is not None: erc = erc_force
 
         self._before_detect()
 
@@ -270,7 +267,7 @@ class ContractExp():
             self._summary = self.contract_summary()
         return self._summary
     def summary_json(self,output_file=None):
-        summary_json = json.dumps(self.summary,indent=4)
+        summary_json = json.dumps(self.summary,indent=2)
         if output_file is not None:
             with open(output_file,'w') as f:
                 f.write(summary_json)

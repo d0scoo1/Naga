@@ -88,18 +88,20 @@ def _detect_owner_modifiers(self):
             self.onlyRole_modifiers.append(m)
 
     self.all_only_modifier_svars = list(set(all_onlyOwner_svars + all_onlyRole_svars))
-    self.only_modifiers_detected_owners = []
 
+    self.modifiers_detected_owners = []
+    self.modifiers_detected_roles = []
     for svar in all_onlyOwner_svars:
         if not _is_owner_type(svar):
             continue
         _set_state_vars_label(self,'owner',[svar])
-        self.only_modifiers_detected_owners.append(svar)
+        self.modifiers_detected_owners.append(svar)
+
     for svar in all_onlyRole_svars:
         if not _is_owner_type(svar):
             continue
         _set_state_vars_label(self,'role',[svar])
-        self.only_modifiers_detected_owners.append(svar)
+        self.modifiers_detected_roles.append(svar)
 
 from slither.core.declarations import SolidityVariableComposed
 
