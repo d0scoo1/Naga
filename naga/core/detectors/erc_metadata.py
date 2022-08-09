@@ -68,7 +68,6 @@ def _search_state_var_in_return(self, f_sig:str, type_str:str, svar_lower_names:
         if svar.name.lower().replace('_','') == svar_lower_names[0]:
             self.detect_erc_state_vars_by_name += [svar]
             return [svar]
-        
         for name in svar_lower_names:
             if name in svar.name.lower():
                 name_candidates.append(svar)
@@ -78,8 +77,10 @@ def _search_state_var_in_return(self, f_sig:str, type_str:str, svar_lower_names:
         直接匹配类型最相近，如果都相近，则全都返回
         """
         name_candidates = [svar for svar in name_candidates if str(svar.type).startswith(type_str)]
+    if len(name_candidates) ==1:
         self.detect_erc_state_vars_by_name += name_candidates
-    return name_candidates
+        return name_candidates
+    return []
 
 """
     Search common state variables in the ERC 20 721 1155
@@ -111,25 +112,20 @@ class ERCMetaData(AbstractDetector):
 
     def _detect(self):
         detect_erc_state_vars(self.naga,self.erc)
-
+        detect_unfair_settings(self.naga)
     def summary(self):
         return {}
 
-'''
+
 def detect_unfair_settings(self):
     """
-        Before Functions: detect_owners_bwList, detect_paused, detect_erc_state_vars
-        检查所有剩下的 owner 可以修改的 state vars
+    对于剩余 uint 变量，通常是 fee 等参数，这些变量 user 只能读，而 owner 可能更新
     """
-    unfair_settings = []
-    for svar in self.state_vars_owner_updated:
-        unfair_settings.append(svar)
+    unfair_svars_candidates = [svar for svar in _get_no_label_svars(self,self.all_state_vars) if str(svar.type).startswith('uint')]
 
-    marked_svars = []
-    for svars in self.label_svars_dict.values():
-        marked_svars += svars
-    unfair_settings = list(set(unfair_settings) - set(marked_svars))
+    unfair_svars_1001 = [svar for svar in self.state_vars_user_only_read_owner_updated if svar in unfair_svars_candidates]
+    #unfair_svars_x1x1 = [svar for svar in self.state_vars_user_written_owner_updated if svar not in unfair_svars_candidates]
+    
+    _set_state_vars_label(self,'unfair_uint',unfair_svars_1001)
 
-    self.label_svars_dict.update({'unfair_settings':unfair_settings})
-'''
 

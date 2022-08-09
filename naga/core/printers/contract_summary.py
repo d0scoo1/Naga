@@ -72,7 +72,7 @@ def base_info(self):
 from naga.core.openzeppelin import (ERC20_STATE_VARIAVLES, ERC721_STATE_VARIAVLES, ERC1155_STATE_VARIAVLES)
 
 def get_common_labels():
-    return ['owner', 'role', 'bwList', 'paused']
+    return ['owner', 'role', 'bwList', 'paused','unfair_uint']
 def get_svar_labels():
     svar_labels = []
     for s in ERC20_STATE_VARIAVLES + ERC721_STATE_VARIAVLES + ERC1155_STATE_VARIAVLES:
@@ -169,18 +169,18 @@ def lack_event_summary(self):
     for f in self.lack_event_user_functions:
         for svar in f.function.all_state_variables_written():
             exp_svar = self.exp_svars_dict[svar]
-            if exp_svar['label'] != None:
+            if exp_svar['label'] != 'no_label':
                 lack_event_user_erc_svars[exp_svar['label']].append({"function":f.function.full_name, "svar":svar.name})
             else:
                 lack_event_user_erc_svars['no_label'].append({"function":f.function.full_name, "svar":svar.name})
     for f in self.lack_event_owner_functions:
         for svar in f.function.all_state_variables_written():
             exp_svar = self.exp_svars_dict[svar]
-            if exp_svar['label'] != None:
+            if exp_svar['label'] != 'no_label':
                 lack_event_owner_erc_svars[exp_svar['label']].append({"function":f.function.full_name, "svar":svar.name})
             else:
                 lack_event_owner_erc_svars['no_label'].append({"function":f.function.full_name, "svar":svar.name})
-    lack_event_owner_erc_svars['owners'] = lack_event_owner_erc_svars['owner'] + lack_event_owner_erc_svars['role']
+    lack_event_owner_erc_svars['access'] = lack_event_owner_erc_svars['owner'] + lack_event_owner_erc_svars['role']
     summary['LE_user_svars'] = lack_event_user_erc_svars
     summary['LE_owner_svars'] = lack_event_owner_erc_svars
     
