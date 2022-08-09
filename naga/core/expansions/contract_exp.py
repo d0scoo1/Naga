@@ -94,11 +94,18 @@ class ContractExp():
         '''
         for svar in self.exp_svars_dict:
             self.exp_svars_dict[svar]['rw'] = self.get_rw_str(svar)
+            '''
+            if self.exp_svars_dict[svar]['label'] == 'role':
+                print(svar)
+                fs_u_r,fs_u_w,fs_o_r,fs_o_w = self.get_svar_read_written_functions(svar)
+                #print(fs_u_r)
+                #print(fs_u_w)
+                for f in fs_u_r: print('    ur',f.function.full_name,f.function.contract_declarer)
+                for f in fs_u_w: print('    uw',f.function.full_name)
+                #print(fs_o_r)
+                #print(fs_o_w)
+            '''
         self._summary = None
-
-        #self._svar2label()
-        #self._svar_rw_dict = None
-        #
 
     def detect(self,erc_force = None):
         self.erc_force = erc_force
@@ -230,7 +237,7 @@ class ContractExp():
         if len(fs_o_w) > 0: rw_str += '1'
         else: rw_str += '0'
         return rw_str
-    
+    '''
     @property
     def svar_rw_dict(self):
         if self._svar_rw_dict is None:
@@ -244,22 +251,8 @@ class ContractExp():
         for label, svars in self.label_svars_dict.items():
             for svar in svars:
                 self.svar_label_dict[svar] = label
-        """
-        self.svar_labels_dict = {}
-        self.svar_label_dict = {}
-        for label, svars in self.label_svars_dict.items():
-            for svar in svars:
-                self.svar_label_dict[svar] = label
-                fs_u_r,fs_u_w,fs_o_r,fs_o_w = self.get_svar_read_written_functions(svar)
-                self.svar_labels_dict[svar] = {
-                    'label': label,
-                    'is_user_read': len(fs_u_r) > 0,
-                    'is_user_written': len(fs_u_w) > 0,
-                    'is_owner_read': len(fs_o_r) > 0,
-                    'is_owner_written': len(fs_o_w) > 0,
-                }
-        """
-    
+    '''
+
     from naga.core.printers import contract_summary
     @property
     def summary(self):

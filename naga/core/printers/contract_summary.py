@@ -99,6 +99,7 @@ def state_variable_summary(self):
     
     for svar_label in get_common_labels() + get_svar_labels():
         summary['state_variables_label'][svar_label] = [str(svar) for svar in self.exp_svars_dict if self.exp_svars_dict[svar]['label'] == svar_label]
+    summary['state_variables_label']['access'] = summary['state_variables_label']['owner'] + summary['state_variables_label']['role']
     
     summary['multistage_owners'] = [svar.name for svar in self.multistage_owners]
 
@@ -129,7 +130,8 @@ def function_summary(self):
     return summary
 
 def modifier_summary(self):
-    summary = {'modifiers':[],
+    summary = {'all_modifiers':[],
+    'access_modifiers':[ m.name for m in self.access_modifiers],
     'onlyOwner_modifiers':[svar.name for svar in self.onlyOwner_modifiers],
     'onlyRole_modifiers':[svar.name for svar in self.onlyRole_modifiers],
     }
@@ -141,7 +143,7 @@ def modifier_summary(self):
             'state_variables_written': [svar.name for svar in m.all_state_variables_written()],
             'solidity_variables_read':[svar.name for svar in m.all_solidity_variables_read()],
         }
-        summary['modifiers'].append(modifier)
+        summary['all_modifiers'].append(modifier)
 
     return summary
 
@@ -191,16 +193,27 @@ def lack_event_summary(self):
 def detect_method_summary(self):
     summary ={
         #openzeppelin 直接检测出的 owner / role, paused
-        'inheritance_detected_svars':[],
+        'inheritance_detected':{},
         # modifier 直接检测出的 owner / role
-        'modifiers_detected_owners':[svar.name for svar in self.modifiers_detected_owners],
-        'modifiers_detected_roles':[svar.name for svar in self.modifiers_detected_roles],
+        'modifier_detected':{
+            'owner':[svar.name for svar in self.modifiers_detected_owners],
+            'role':[svar.name for svar in self.modifiers_detected_roles],
+        },
+        'im_detected':{
+            'owner':[],
+            'role':[],
+        },
         'detect_erc_state_vars_by_return':[],
         'detect_erc_state_vars_by_name':[],
     }
 
-    for k,v in self.inheritance_detected_svars.items():
-        summary['inheritance_detected_svars'].append({"label":k, "svars":[svar.name for svar in v]})
+    for label,svars in self.inheritance_detected_svars.items():
+        summary['inheritance_detected'][label] = [svar.name for svar in svars]
+    
+    ### 不同的contracts 可能存在相同的 stateVariable name，因此不能直接使用变量名来 list(set())
+    summary['im_detected']['owner'] = [svar.name for svar in list(set(self.modifiers_detected_owners + self.inheritance_detected_svars['owner']))]
+    summary['im_detected']['role'] = [svar.name for svar in list(set(self.modifiers_detected_roles + self.inheritance_detected_svars['role']))]
+    
 
     summary['detect_erc_state_vars_by_return'] = [svar.name for svar in self.detect_erc_state_vars_by_return]
     summary['detect_erc_state_vars_by_name'] = [svar.name for svar in self.detect_erc_state_vars_by_name]

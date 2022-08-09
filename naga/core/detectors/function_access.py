@@ -119,30 +119,62 @@ def _is_owner(svar,owners,written_functions):
         return False # 否则返回 False
     return True
 
-def _detect_bwList(self):
+def _is_written_by_other_owner(svar,owners,written_functions):
     '''
-    检查 mapping 类型的 owner 是否是黑名单
-    blackList / whiteList 和 admin 有相同的模式，因此，需要排除 blackList / whiteList
-    具体而言，我们检查 token_written_functions 中出现的 owner: mapping，如果存在，我们认为它是 blackList / whiteList 而不是 owner
+    校验一个变量是否被其他 owner 写入
     '''
-    owners = _get_label_svars(self,'owner') + _get_label_svars(self,'role')
-    mapping_owners = [svar for svar in owners if isinstance(svar.type, MappingType)]
-    twf_conditions = [cond for f in self.token_written_functions for cond in f.conditions]
-
-    for svar in mapping_owners:
-        # 如果 svar 在任意一个 token_written_functions 的 condition 中被读，则认为它是 blackList / whiteList，不是 owner
+    t_owners = list(set(owners)- set([svar]))
+    for f in written_functions:
+        if f.is_constructor_or_initializer: continue
+        # 如果存在一个 condition 读取了 owners 和 msg.sender
         if any(
             SolidityVariableComposed('msg.sender') in cond.all_read_vars_group.solidity_vars 
-            and svar in cond.all_read_vars_group.state_vars
-            for cond in twf_conditions
+            and set(cond.all_read_vars_group.state_vars) & set(t_owners) != set()
+            for cond in f.conditions
         ):
+            continue
+        return False # 否则返回 False
+    return True
+
+def _detect_bwList(self):
+    '''
+    检查 bwList 可能和 owner 有相同的模式，也可能接收外部变量
+    例如：
+        require(!_blacklist[msg.sender]);
+        require(!_blacklist[sender] && !_blacklist[recipient], "Blacklisted!");
+    因此我们检查所有的 mapping(address => bool) 类型变量，如果它的写依赖于 owner(不能是自己)，且出现在 token_written_functions 的 require 中 则认为是 bwList
+    '''
+    owners = _get_label_svars(self,'owner') + _get_label_svars(self,'role')
+    bwList_candidates = [svar for svar in self.all_state_vars if isinstance(svar.type, MappingType) and svar.type.type_from == ElementaryType('address') and svar.type.type_to == ElementaryType('bool')]
+
+    twf_conditions = [cond for f in self.token_written_functions for cond in f.conditions]
+    for svar in bwList_candidates:
+        if not _is_written_by_other_owner(svar,owners,self.state_var_written_functions_dict[svar]):
+            continue
+        if any(
+            svar in cond.all_read_vars_group.state_vars
+            for cond in twf_conditions
+        ): # 如果出现在 token_written_functions 中，注意，这里并没有校验 msg.sender # SolidityVariableComposed('msg.sender') in cond.all_read_vars_group.solidity_vars 
             _set_state_vars_label(self,'bwList',[svar])
+
 
 def _set_owner_in_condition_functions(self):
     owner_in_condition_functions = []
+    access_modifiers = []
+    for m in self.contract.modifiers:
+        if set(m.all_state_variables_read()) & set(_get_label_svars(self,'owner')+_get_label_svars(self,'role')):
+            access_modifiers.append(m)
+
+    self.access_modifiers = access_modifiers
+
+    for f in self.functions:
+        if set(f.function.modifiers) & set(access_modifiers) != set():
+            owner_in_condition_functions.append(f)
+
     for svar in _get_label_svars(self,'owner') + _get_label_svars(self,'role'):
         owner_in_condition_functions += self.state_var_read_in_condition_functions_dict[svar]
     self.owner_in_condition_functions = list(set(owner_in_condition_functions))
+
 
 def _multistage_owners(self):
     multistage_owners = _get_label_svars(self,'role')
