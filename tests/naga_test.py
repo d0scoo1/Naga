@@ -7,7 +7,7 @@ from naga.naga import Naga
 from func_timeout.exceptions import FunctionTimedOut
 from func_timeout import func_set_timeout
 
-time_out_seconds = 10
+time_out_seconds = 60
 
 class NagaTest():
     def __init__(self,contract,input_dir,output_dir) -> None:

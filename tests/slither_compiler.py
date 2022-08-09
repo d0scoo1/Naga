@@ -28,7 +28,7 @@ def get_solc_remaps(version='0.8.0',openzeppelin_dir = openzeppelin_dir):
         return "@openzeppelin/=" + openzeppelin_dir + "/openzeppelin-contracts-solc-0.8/"
     return "@openzeppelin/=" + openzeppelin_dir + "/openzeppelin-contracts-solc-0.8/"
 
-time_out_seconds = 10
+time_out_seconds = 60
 
 @func_set_timeout(time_out_seconds)
 def single_compile(sol_path,compiler_version):

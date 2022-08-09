@@ -84,6 +84,7 @@ def state_variable_summary(self):
     summary = {
         'state_variables': [],
         'state_variables_label': {},
+        'multistage_owners': [],
         'state_variables_label_rw': {},
         #'state_variables_rw': {},
     }
@@ -99,6 +100,8 @@ def state_variable_summary(self):
     for svar_label in get_common_labels() + get_svar_labels():
         summary['state_variables_label'][svar_label] = [str(svar) for svar in self.exp_svars_dict if self.exp_svars_dict[svar]['label'] == svar_label]
     
+    summary['multistage_owners'] = [svar.name for svar in self.multistage_owners]
+
     for svar_label in get_svar_labels():
         svars = [svar for svar in self.exp_svars_dict if self.exp_svars_dict[svar]['label'] == svar_label]
         if len(svars) > 0:
