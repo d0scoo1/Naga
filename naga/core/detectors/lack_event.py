@@ -1,3 +1,5 @@
+from .abstract_detector import AbstractDetector
+
 def detect_lack_event_functions(self):
     """
     Before Functions: detect_owners_bwList
@@ -17,3 +19,10 @@ def detect_lack_event_functions(self):
     self.lack_event_functions = lack_event_owner_functions + lack_event_user_functions
     self.lack_event_owner_functions = lack_event_owner_functions
     self.lack_event_user_functions = lack_event_user_functions
+
+class LackEvent(AbstractDetector):
+    def _detect(self):
+        detect_lack_event_functions(self.naga)
+
+    def summary(self):
+        return {}

@@ -1,6 +1,6 @@
-
+from .abstract_detector import AbstractDetector
+from .abstract_detector import (_set_state_vars_label,_get_no_label_svars,_get_label_svars)
 from slither.core.solidity_types.elementary_type import ElementaryType
-from .detector_base import (_set_state_vars_label,_get_no_label_svars,_get_label_svars)
 
 def detect_paused(self):
     """
@@ -20,3 +20,10 @@ def detect_paused(self):
         if len(set(funcs_sigs) & set(self.token_write_function_sigs)) > 0: # 如果变量 condition function 出现在 token 写函数中
             paused.append(svar)
     _set_state_vars_label(self,'paused',paused)
+
+class Pause(AbstractDetector):
+    def _detect(self):
+        detect_paused(self.naga)
+
+    def summary(self):
+        return {}

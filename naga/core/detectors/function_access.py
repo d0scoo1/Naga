@@ -1,8 +1,7 @@
-
-from slither.core.variables.state_variable import StateVariable
+from .abstract_detector import AbstractDetector
+from .abstract_detector import (_init_state_vars_label,_set_state_vars_label,_get_no_label_svars,_get_label_svars)
 from slither.core.solidity_types.elementary_type import ElementaryType
 from slither.core.solidity_types.mapping_type import MappingType
-from .detector_base import (_set_state_vars_label,_get_no_label_svars,_get_label_svars)
 '''
 Detect owner, blackList, whiteList, paused
 '''
@@ -118,6 +117,39 @@ def _is_owner(svar,owners,written_functions):
         return False # 否则返回 False
     return True
 
+def _detect_bwList(self):
+    '''
+    检查 mapping 类型的 owner 是否是黑名单
+    blackList / whiteList 和 admin 有相同的模式，因此，需要排除 blackList / whiteList
+    具体而言，我们检查 token_written_functions 中出现的 owner: mapping，如果存在，我们认为它是 blackList / whiteList 而不是 owner
+    '''
+    owners = _get_label_svars(self,'owner') + _get_label_svars(self,'role')
+    mapping_owners = [svar for svar in owners if isinstance(svar.type, MappingType)]
+    twf_conditions = [cond for f in self.token_written_functions for cond in f.conditions]
+
+    for svar in mapping_owners:
+        # 如果 svar 在任意一个 token_written_functions 的 condition 中被读，则认为它是 blackList / whiteList，不是 owner
+        if any(
+            SolidityVariableComposed('msg.sender') in cond.all_read_vars_group.solidity_vars 
+            and svar in cond.all_read_vars_group.state_vars
+            for cond in twf_conditions
+        ):
+            _set_state_vars_label(self,'bwList',[svar])
+
+def _set_owner_in_condition_functions(self):
+    owner_in_condition_functions = []
+    for svar in _get_label_svars(self,'owner') + _get_label_svars(self,'role'):
+        owner_in_condition_functions += self.state_var_read_in_condition_functions_dict[svar]
+    self.owner_in_condition_functions = list(set(owner_in_condition_functions))
+
+def _multistage_owners(self):
+    multistage_owners = _get_label_svars(self,'role')
+    for owner in _get_label_svars(self,'owner'):
+        if _is_owner(owner,[owner],self.state_var_written_functions_dict[owner]): # 如果更新 owner 只依赖自己，则不是 multistage owner
+            continue
+        multistage_owners.append(owner)
+    self.multistage_owners = multistage_owners
+
 def detect_owners(self):
     # 先搜索继承 和 modifier 中的 owner
     _detect_special_inheritance(self)
@@ -157,36 +189,69 @@ def detect_owners(self):
         owner_candidates.append(svar)
 
     _detect_bwList(self)
-    _after_detect_owners(self)
+    _multistage_owners(self)
+    _set_owner_in_condition_functions(self)
+    _divde_state_vars(self) # 要在_set_owner_in_condition_functions(self)后执行
 
-def _detect_bwList(self):
+
+class FunctionAccess(AbstractDetector):
+
+    def _detect(self):
+        _init_state_vars_label(self.naga)
+        detect_owners(self.naga)
+
+    def summary(self):
+        return {}
+
+def _divde_state_vars(self):
     '''
-    检查 mapping 类型的 owner 是否是黑名单
-    blackList / whiteList 和 admin 有相同的模式，因此，需要排除 blackList / whiteList
-    具体而言，我们检查 token_written_functions 中出现的 owner: mapping，如果存在，我们认为它是 blackList / whiteList 而不是 owner
+    在 owner 检测结束后，将 state_vars 划分为 user 和 owner 两部分
     '''
-    owners = _get_label_svars(self,'owner') + _get_label_svars(self,'role')
-    mapping_owners = [svar for svar in owners if isinstance(svar.type, MappingType)]
-    twf_conditions = [cond for f in self.token_written_functions for cond in f.conditions]
 
-    for svar in mapping_owners:
-        # 如果 svar 在任意一个 token_written_functions 的 condition 中被读，则认为它是 blackList / whiteList，不是 owner
-        if any(
-            SolidityVariableComposed('msg.sender') in cond.all_read_vars_group.solidity_vars 
-            and svar in cond.all_read_vars_group.state_vars
-            for cond in twf_conditions
-        ):
-            _set_state_vars_label(self,'bwList',[svar])
+    svars_read = []
+    svars_user_read = []
+    svars_owner_read = []
 
-def _after_detect_owners(self):
-    owner_in_condition_functions = []
+    svars_written = []
+    svars_user_written = []
+    svars_owner_updated = []
 
-    for svar in _get_label_svars(self,'owner') + _get_label_svars(self,'role'):
-        owner_in_condition_functions += self.state_var_read_in_condition_functions_dict[svar]
+    svars_user_only_read = [] # self.svars_user_read - self.svars_user_written
+    svars_user_only_read_owner_updated = [] #self.svars_user_only_read & self.svars_owner_updated
+    svars_user_written_owner_updated = []
 
-    self.owner_in_condition_functions = list(set(owner_in_condition_functions))
+    for f in self.state_var_read_functions:
+        svars = f.function.all_state_variables_read()
+        svars_read += svars
+        if f.is_constructor_or_initializer: continue
+        if f in self.owner_in_condition_functions: svars_owner_read += svars
+        else: svars_user_read += svars
+    svars_read = list(set(svars_read))
+    svars_user_read = list(set(svars_user_read))
+    svars_owner_read = list(set(svars_owner_read))
 
+    for f in self.state_var_written_functions:
+        svars = f.function.all_state_variables_written()
+        svars_written += svars
+        if f.is_constructor_or_initializer: continue
+        if f in self.owner_in_condition_functions: svars_owner_updated += svars
+        else: svars_user_written += svars
+    svars_written = list(set(svars_written))
+    svars_user_written = list(set(svars_user_written))
+    svars_owner_updated = list(set(svars_owner_updated))
 
-def access_printer(self):
-    pass
+    svars_user_only_read = list(set(svars_user_read)-set(svars_user_written))
+    svars_user_only_read_owner_updated = list(set(svars_user_only_read) & set(svars_owner_updated))
+    svars_user_written_owner_updated = list(set(svars_user_written) & set(svars_owner_updated))
 
+    self.state_vars_read = svars_read
+    self.state_vars_owner_read =svars_owner_read
+    self.state_vars_user_read = svars_user_read
+
+    self.state_vars_written = svars_written
+    self.state_vars_user_written = svars_user_written
+    self.state_vars_owner_updated = svars_owner_updated
+
+    self.state_vars_user_only_read = svars_user_only_read
+    self.state_vars_user_only_read_owner_updated = svars_user_only_read_owner_updated
+    self.state_vars_user_written_owner_updated = svars_user_written_owner_updated

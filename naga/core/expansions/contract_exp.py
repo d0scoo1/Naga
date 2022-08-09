@@ -1,12 +1,18 @@
 from typing import List, Dict,Optional
 from slither.core.declarations import Contract
 from slither.core.variables.state_variable import StateVariable
-
 from .function_exp import FunctionExp
 from .condition_exp import ConditionNode
-from naga.core.openzeppelin import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_WRITE_FUNCS_SIG)
+#from naga.core.openzeppelin import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_WRITE_FUNCS_SIG)
 from slither.core.declarations import SolidityVariableComposed
 import json
+
+ERC20_WRITE_FUNCS_SIG = ["transfer(address,uint256)","approve(address,uint256)","transferFrom(address,address,uint256)"]
+ERC721_WRITE_FUNCS_SIG = ["safeTransferFrom(address,address,uint256)","transferFrom(address,address,uint256)","approve(address,uint256)","setApprovalForAll(address,bool)","safeTransferFrom(address,address,uint256,bytes)"]
+ERC1155_WRITE_FUNCS_SIG = ["setApprovalForAll(address,bool)","safeTransferFrom(address,address,uint256,uint256,bytes)","safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)"]
+
+from naga.core.detectors import (
+        FunctionAccess,Pause,ERCMetaData,LackEvent,)
 
 class ContractExp():
     def __init__(self,contract:Contract,nagaObj) -> None:
@@ -25,7 +31,6 @@ class ContractExp():
     
     @property
     def is_erc20(self) -> bool:
-
         if self._is_erc20 is None:
             funcs_sig = [f.full_name for f in self.contract.functions_entry_points]
             if len(set(ERC20_WRITE_FUNCS_SIG) - set(funcs_sig)) == 0:
@@ -36,7 +41,6 @@ class ContractExp():
     
     @property
     def is_erc721(self) -> bool:
-
         if self._is_erc721 is None:
             funcs_sig = [f.full_name for f in self.contract.functions_entry_points]
             if len(set(ERC721_WRITE_FUNCS_SIG) - set(funcs_sig)) == 0:
@@ -47,7 +51,6 @@ class ContractExp():
 
     @property
     def is_erc1155(self) -> bool:
-
         if self._is_erc1155 is None:
             funcs_sig = [f.full_name for f in self.contract.functions_entry_points]
             if len(set(ERC1155_WRITE_FUNCS_SIG) - set(funcs_sig)) == 0:
@@ -82,49 +85,49 @@ class ContractExp():
     ####        Detect  Functions      ####
     #######################################
 
-    from naga.core.detectors import (
-        init_detect,
-        detect_owners,detect_paused,
-        detect_erc_state_vars,
-        detect_lack_event_functions,)
-
-    
-    def _before_detect_erc_svars(self):
+    def _before_detect(self):
         self._dividing_functions()
 
-        self.init_detect()
-        self.detect_owners()
-
-        self._divde_state_vars() # After detect_owners_bwList
-        self.detect_paused()
-
-    def _after_detect_erc_svars(self):
-        #self.detect_unfair_settings()
-        self.detect_lack_event_functions()
-
+    def _after_detect(self):
+        '''
+        检测结束后，输出 summary
+        '''
+        for svar in self.exp_svars_dict:
+            self.exp_svars_dict[svar]['rw'] = self.get_rw_str(svar)
+        self._summary = None
 
         #self._svar2label()
         #self._svar_rw_dict = None
-        #self._summary = None
-        #self._summary_csv = None
+        #
 
     def detect(self,erc_force = None):
         self.erc_force = erc_force
-        
-        self._before_detect_erc_svars()
+        erc = erc_force
+        if erc_force is None:
+            if self.is_erc20: erc = 'erc20'
+            elif self.is_erc721: erc = 'erc721'
+            elif self.is_erc1155: erc = 'erc1155'
 
-        if erc_force is not None:
-            self.detect_erc_state_vars(erc_force)
-        else:
-            if self.is_erc20: self.detect_erc_state_vars('erc20')
-            elif self.is_erc721: self.detect_erc_state_vars('erc721')
-            elif self.is_erc1155: self.detect_erc_state_vars('erc1155')
+        self._before_detect()
 
-        self._after_detect_erc_svars()
+        '''
+        在其他的 detector 执行前，我们需要
+        1. 划分需要的 function 分类
+        2. 检测 owner 权限 (FunctionAccess, 顺便检测了出了 bwList 和部分 paused)
+        3. 根据检测结果，划分变量为 user, owner 的读写权限
+        '''
+        self.detectors =[
+            FunctionAccess(self), # 必须是第一个，它包含初始化和其他 detectors 依赖的信息
+            Pause(self),
+            ERCMetaData(self,erc),
+            LackEvent(self),
+        ]
+        for detector in self.detectors:
+            detector.detect()
 
+        self._after_detect()
 
     def _dividing_functions(self):
-
         self.functions: List["FunctionExp"] = [] # All entry functions
         self.state_var_written_functions: List["FunctionExp"] = []
         self.state_var_read_functions: List["FunctionExp"] = []
@@ -193,65 +196,6 @@ class ContractExp():
             None,
         )
 
-    '''
-    def _update_function_owners(self):
-        for owner in self.owners:
-            for f in self.state_var_read_in_condition_functions_dict[owner]:
-                f.owners.append(owner)
-    '''
-
-    
-
-    def _divde_state_vars(self):
-
-        svars_read = []
-        svars_user_read = []
-        svars_owner_read = []
-
-        svars_written = []
-        svars_user_written = []
-        svars_owner_updated = []
-
-        svars_user_only_read = [] # self.svars_user_read - self.svars_user_written
-        svars_user_only_read_owner_updated = [] #self.svars_user_only_read & self.svars_owner_updated
-        svars_user_written_owner_updated = []
-
-        for f in self.state_var_read_functions:
-            svars = f.function.all_state_variables_read()
-            svars_read += svars
-            if f.is_constructor_or_initializer: continue
-            if f in self.owner_in_condition_functions: svars_owner_read += svars
-            else: svars_user_read += svars
-        svars_read = list(set(svars_read))
-        svars_user_read = list(set(svars_user_read))
-        svars_owner_read = list(set(svars_owner_read))
-
-        for f in self.state_var_written_functions:
-            svars = f.function.all_state_variables_written()
-            svars_written += svars
-            if f.is_constructor_or_initializer: continue
-            if f in self.owner_in_condition_functions: svars_owner_updated += svars
-            else: svars_user_written += svars
-        svars_written = list(set(svars_written))
-        svars_user_written = list(set(svars_user_written))
-        svars_owner_updated = list(set(svars_owner_updated))
-
-        svars_user_only_read = list(set(svars_user_read)-set(svars_user_written))
-        svars_user_only_read_owner_updated = list(set(svars_user_only_read) & set(svars_owner_updated))
-        svars_user_written_owner_updated = list(set(svars_user_written) & set(svars_owner_updated))
-
-        self.state_vars_read = svars_read
-        self.state_vars_owner_read =svars_owner_read
-        self.state_vars_user_read = svars_user_read
-
-        self.state_vars_written = svars_written
-        self.state_vars_user_written = svars_user_written
-        self.state_vars_owner_updated = svars_owner_updated
-
-        self.state_vars_user_only_read = svars_user_only_read
-        self.state_vars_user_only_read_owner_updated = svars_user_only_read_owner_updated
-        self.state_vars_user_written_owner_updated = svars_user_written_owner_updated
-
     def get_svar_read_written_functions(self, state_var):
         """
         Users and owners read and write permissions on state variables
@@ -318,24 +262,23 @@ class ContractExp():
                     'is_owner_written': len(fs_o_w) > 0,
                 }
         """
-    '''
-    from naga.core.printers import contract_summary, contract_summary2csv
+    
+    from naga.core.printers import contract_summary
     @property
     def summary(self):
         if self._summary is None:
             self._summary = self.contract_summary()
         return self._summary
-    
-    
-    
-    def summary_csv(self):
-        return self.contract_summary2csv()
-    '''
     def summary_json(self,output_file=None):
-        return
         summary_json = json.dumps(self.summary,indent=4)
         if output_file is not None:
             with open(output_file,'w') as f:
                 f.write(summary_json)
             f.close()
         return summary_json
+    
+    '''
+    def summary_csv(self):
+        return self.contract_summary2csv()
+    '''
+    

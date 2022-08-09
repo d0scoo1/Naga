@@ -1,6 +1,7 @@
 from typing import List, Dict,Optional
 from slither.core.variables.state_variable import StateVariable
-from .detector_base import (_set_state_vars_label,_get_no_label_svars,_get_label_svars)
+from .abstract_detector import AbstractDetector
+from .abstract_detector import (_set_state_vars_label,_get_no_label_svars,_get_label_svars)
 
 
 #  state variable name, return function signature, type, possible names (lower names)
@@ -89,6 +90,17 @@ def detect_erc_state_vars(self,erc):
     elif erc == 'erc1155':
         _detect_erc_state_vars(self,ERC1155_STATE_VARIAVLES)
 
+
+class ERCMetaData(AbstractDetector):
+    def __init__(self,naga, erc) -> None:
+        super().__init__(naga)
+        self.erc = erc
+
+    def _detect(self):
+        detect_erc_state_vars(self.naga,self.erc)
+
+    def summary(self):
+        return {}
 
 '''
 def detect_unfair_settings(self):
