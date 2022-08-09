@@ -48,32 +48,38 @@ def _search_state_var_in_return(self, f_sig:str, type_str:str, svar_lower_names:
     candidates = []
     if func is not None:
         candidates = [svar for svar in func.return_var_group.state_vars if str(svar.type).startswith(type_str)]
-        if candidates != []:
+        if len(candidates) == 1:
             self.detect_erc_state_vars_by_return += candidates
             return candidates
 
-    for svar in self.all_state_vars:
+    if len(candidates) == 0:
+        candidates = self.all_state_vars
+    
+    name_candidates = []
+    for svar in candidates:
+        # 排除
         if any(
             svar
             for esvar in exclude_stateVaribles
             if str(svar.type).startswith(esvar[0]) and svar.name == esvar[1] 
         ):
             continue
-        
+        # 匹配最贴近的名字
         if svar.name.lower().replace('_','') == svar_lower_names[0]:
-            self.detect_erc_state_vars_by_name.append(svar)
+            self.detect_erc_state_vars_by_name += [svar]
             return [svar]
+        
         for name in svar_lower_names:
             if name in svar.name.lower():
-                candidates.append(svar)
-    candidates = list(set(candidates))
-    if len(candidates) > 1:
+                name_candidates.append(svar)
+    name_candidates = list(set(name_candidates))
+    if len(name_candidates) > 1:
         """
         直接匹配类型最相近，如果都相近，则全都返回
         """
-        candidates = [svar for svar in candidates if str(svar.type).startswith(type_str)]
-        self.detect_erc_state_vars_by_name += candidates
-    return candidates
+        name_candidates = [svar for svar in name_candidates if str(svar.type).startswith(type_str)]
+        self.detect_erc_state_vars_by_name += name_candidates
+    return name_candidates
 
 """
     Search common state variables in the ERC 20 721 1155
