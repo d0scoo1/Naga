@@ -112,20 +112,5 @@ class ERCMetaData(AbstractDetector):
 
     def _detect(self):
         detect_erc_state_vars(self.naga,self.erc)
-        detect_unfair_settings(self.naga)
     def summary(self):
         return {}
-
-
-def detect_unfair_settings(self):
-    """
-    对于剩余 uint 变量，通常是 fee 等参数，这些变量 user 只能读，而 owner 可能更新
-    """
-    unfair_svars_candidates = [svar for svar in _get_no_label_svars(self,self.all_state_vars) if str(svar.type).startswith('uint')]
-
-    unfair_svars_1001 = [svar for svar in self.state_vars_user_only_read_owner_updated if svar in unfair_svars_candidates]
-    #unfair_svars_x1x1 = [svar for svar in self.state_vars_user_written_owner_updated if svar not in unfair_svars_candidates]
-    
-    _set_state_vars_label(self,'unfair_uint',unfair_svars_1001)
-
-

@@ -12,7 +12,7 @@ ERC721_WRITE_FUNCS_SIG = ["safeTransferFrom(address,address,uint256)","transferF
 ERC1155_WRITE_FUNCS_SIG = ["setApprovalForAll(address,bool)","safeTransferFrom(address,address,uint256,uint256,bytes)","safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)"]
 
 from naga.core.detectors import (
-        FunctionAccess,Pause,ERCMetaData,LackEvent,)
+        FunctionAccess,Pause,ERCMetaData,TradingParams,LackEvent,)
 
 class ContractExp():
     def __init__(self,contract:Contract,nagaObj) -> None:
@@ -124,6 +124,7 @@ class ContractExp():
             FunctionAccess(self), # 必须是第一个，它包含初始化和其他 detectors 依赖的信息
             Pause(self),
             ERCMetaData(self,erc),
+            TradingParams(self),
             LackEvent(self),
         ]
         for detector in self.detectors:
@@ -153,10 +154,10 @@ class ContractExp():
             if len(f.function.all_state_variables_written()) > 0:
                 self.state_var_written_functions.append(f)
         
+        
         # Get all transfer functions
-        for fs in self.token_write_function_sigs :
-            f = self.get_function_from_signature(fs)
-            if f is not None:
+        for f in self.functions:
+            if f.function.full_name in self.token_write_function_sigs:
                 self.token_written_functions.append(f)
         
         all_state_vars = self.contract.all_state_variables_written + self.contract.all_state_variables_read
@@ -190,15 +191,6 @@ class ContractExp():
             
             for svar, value in self.state_var_read_in_condition_functions_dict.items():
                 self.state_var_read_in_condition_functions_dict[svar] = list(set(value))
-
-    def get_function_from_signature(self, function_signature):
-        """
-            获取 public / expernal 函数
-        """
-        return next(
-            (FunctionExp(f) for f in self.contract.functions if f.full_name == function_signature and not f.is_shadowed),
-            None,
-        )
 
     def get_svar_read_written_functions(self, state_var):
         """

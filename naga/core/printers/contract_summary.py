@@ -72,7 +72,7 @@ def base_info(self):
 from naga.core.openzeppelin import (ERC20_STATE_VARIAVLES, ERC721_STATE_VARIAVLES, ERC1155_STATE_VARIAVLES)
 
 def get_common_labels():
-    return ['owner', 'role', 'bwList', 'paused','unfair_uint']
+    return ['owner', 'role', 'bwList', 'paused','immutable_trading_param','mutable_trading_param']
 def get_svar_labels():
     svar_labels = []
     for s in ERC20_STATE_VARIAVLES + ERC721_STATE_VARIAVLES + ERC1155_STATE_VARIAVLES:
@@ -100,7 +100,7 @@ def state_variable_summary(self):
     for svar_label in get_common_labels() + get_svar_labels():
         summary['state_variables_label'][svar_label] = [str(svar) for svar in self.exp_svars_dict if self.exp_svars_dict[svar]['label'] == svar_label]
     summary['state_variables_label']['access'] = summary['state_variables_label']['owner'] + summary['state_variables_label']['role']
-    
+
     summary['multistage_owners'] = [svar.name for svar in self.multistage_owners]
 
     for svar_label in get_svar_labels():
