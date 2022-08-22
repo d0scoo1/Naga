@@ -77,10 +77,10 @@ def irs_ssa_track(irs, tainted_vars, walked_functions):
         # print("irs_ssa_track: {}".format(ir))
         if isinstance(ir,NO_LEFT_VALUE_OPERATIONS): #,PhiCallback,SolidityCall,LibraryCall,LowLevelCall,HighLevelCall
             continue
-        try:
-            lval = ir.lvalue
-        except:
-            print(ir,type(ir))
+        #try:
+        #    lval = ir.lvalue
+        #except:
+        #    print(ir,type(ir))
         lval = ir.lvalue  # 由于是从 read 开始查找， read 必有左值，所以这里不进行判断
         rval = []
         if isinstance(ir, InternalCall): # 如果是 internalcall
