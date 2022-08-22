@@ -4,14 +4,13 @@ from slither.core.variables.state_variable import StateVariable
 from .function_exp import FunctionExp
 from .condition_exp import ConditionNode
 #from naga.core.openzeppelin import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_WRITE_FUNCS_SIG)
-from slither.core.declarations import SolidityVariableComposed
 import json
 
 ERC20_WRITE_FUNCS_SIG = ["transfer(address,uint256)","approve(address,uint256)","transferFrom(address,address,uint256)"]
 ERC721_WRITE_FUNCS_SIG = ["safeTransferFrom(address,address,uint256)","transferFrom(address,address,uint256)","approve(address,uint256)","setApprovalForAll(address,bool)","safeTransferFrom(address,address,uint256,bytes)"]
 ERC1155_WRITE_FUNCS_SIG = ["setApprovalForAll(address,bool)","safeTransferFrom(address,address,uint256,uint256,bytes)","safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)"]
 
-from naga.core.detectors import (
+from naga.detectors import (
         FunctionAccess,Pause,ERCMetaData,TradingParams,LackEvent,)
 
 class ContractExp():
@@ -166,7 +165,7 @@ class ContractExp():
             for svar in f.function.all_state_variables_written() + f.function.all_state_variables_read():
                 all_state_vars.append(svar)
             for cond in f.conditions:
-                for svar in cond.all_read_vars_group.state_vars:
+                for svar in cond.dep_vars_groups.state_vars:
                     all_state_vars.append(svar)
 
         self.all_state_vars = list(set(all_state_vars))
@@ -185,7 +184,7 @@ class ContractExp():
 
             for cond in f.conditions:
                 #print(cond)
-                for svar in cond.all_read_vars_group.state_vars:
+                for svar in cond.dep_vars_groups.state_vars:
                     self.state_var_read_in_conditions_dict[svar].append(cond)
                     self.state_var_read_in_condition_functions_dict[svar].append(f)
             
@@ -245,7 +244,7 @@ class ContractExp():
                 self.svar_label_dict[svar] = label
     '''
 
-    from naga.core.printers import contract_summary
+    from naga.printers import contract_summary
     @property
     def summary(self):
         if self._summary is None:

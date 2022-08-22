@@ -39,6 +39,7 @@ class VariableGroup:
             var_hashable = set()
             var_unhashable = []
             for v in self.dep_irs_ssa:
+                
                 if isinstance(v,(StateIRVariable,LocalIRVariable)):
                     var_hashable.add(v._non_ssa_version)
                 else: 

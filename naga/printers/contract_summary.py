@@ -69,7 +69,7 @@ def base_info(self):
     })
     return info
 
-from naga.core.openzeppelin import (ERC20_STATE_VARIAVLES, ERC721_STATE_VARIAVLES, ERC1155_STATE_VARIAVLES)
+from naga.openzeppelin import (ERC20_STATE_VARIAVLES, ERC721_STATE_VARIAVLES, ERC1155_STATE_VARIAVLES)
 
 def get_common_labels():
     return ['owner', 'role', 'bwList', 'paused','immutable_trading_param','mutable_trading_param']

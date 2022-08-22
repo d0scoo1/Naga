@@ -1,6 +1,6 @@
 
-from naga.core.expansions import ContractExp
-from naga.core.openzeppelin import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_WRITE_FUNCS_SIG)
+from .core import ContractExp
+from .openzeppelin import (ERC20_WRITE_FUNCS_SIG,ERC721_WRITE_FUNCS_SIG,ERC1155_WRITE_FUNCS_SIG)
 from slither import Slither
 
 

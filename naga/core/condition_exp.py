@@ -12,12 +12,9 @@ def _get_condition_depVars(node:Node,msg:str) -> List:
     The condition statement could have more than one condition, connected by AND &&, which is equal to multiple requires.
     We divide the requires into multiple requires by &&.
     '''
-    #if node.function.full_name != 'safeTransferFrom(address,address,uint256,uint256,bytes)': return []
-    #if str(node) != 'EXPRESSION require(bool,string)(isApprovedForAll(from,_msgSender()),ERC1155: caller is not owner nor approved)': return []
-    
     if node.irs_ssa == []:
         return []
-    read_vars = node.irs_ssa[-1].read
+
     r_vars = []
     l_vars = []
 
@@ -26,18 +23,15 @@ def _get_condition_depVars(node:Node,msg:str) -> List:
             l_vars.append(ir.lvalue) # 保存左值是为了将 read 中依赖的值去掉
             r_vars += ir.read
 
-    r_node_conds = [ v for v in r_vars if v not in l_vars ]
-    #r_node_conds = list(set(r_vars) - set(l_vars))
-
-    if len(r_node_conds) == 0:
-        r_node_conds = [read_vars[0]] # 如果没有 && 条件，则直接使用最后一个 ir 的 read 作为 require
-    #print('r_node_conds',','.join([str(v) for v in r_node_conds]))
-    #for c in [ConditionNode(node, rnc, msg) for rnc in r_node_conds]: print(c)
-    return [ConditionNode(node, rnc, msg) for rnc in r_node_conds]
+    r_node_conds = [ v for v in r_vars if v not in l_vars]
+    # 如果没有 && 条件，则直接为空
+    if len(r_node_conds) != 0: # 存在 && 条件
+        return [ConditionNode(node, [rnc], msg) for rnc in r_node_conds] # 设置为多个 require
+    else:
+        return [ConditionNode(node,node.irs_ssa[-1].read,msg)] #依赖条件直接为require 的 read
 
 def get_require(node:Node) -> List:
-    if not any( c.name in ["require(bool)", "require(bool,string)"] for c in node.solidity_calls):
-        #print("Require node is not a require node")
+    if not any(c.name in ["require(bool)", "require(bool,string)"] for c in node.solidity_calls):
         return []
     
     msg = ''
@@ -58,9 +52,9 @@ class ConditionNode(NodeExp):
     def __init__(self, node:Node, condition_read:Variable, msg:str):
         self.node:Node = node
         self.condType:NodeType = node.type # 使用 node 的 type 作为 condType
-        self.condition_read = condition_read # 每个 require 我们只关心一个 condition
+        self.condition_read:List = condition_read # 每个 require 我们只关心一个 condition
         self.msg:str = msg # require 还包含一个 message
-        super().__init__(node,tainted_vars = [self.condition_read])
+        super().__init__(node,tainted_vars = self.condition_read)
         self.owner_candidates = self._get_owner_candidates()
     
     def exist_oror(self):
@@ -70,14 +64,14 @@ class ConditionNode(NodeExp):
 
     def _get_owner_candidates(self):
         """
-        如果 all_read_vars_group 中 local_vars 为空，state_vars 中有 address 或 mapping(address => bool)，且 solidity_vars 中存在一个 msg.sender，则我们认为它可能是 owner
+        如果 dep_vars_groups 中 local_vars 为空，state_vars 中有 address 或 mapping(address => bool)，且 solidity_vars 中存在一个 msg.sender，则我们认为它可能是 owner
         """
 
-        if len(self.all_read_vars_group.local_vars) > 0 or SolidityVariableComposed('msg.sender') not in self.all_read_vars_group.solidity_vars:
+        if len(self.dep_vars_groups.local_vars) > 0 or SolidityVariableComposed('msg.sender') not in self.dep_vars_groups.solidity_vars:
             return []
 
         owner_candidates = []
-        for svar in self.all_read_vars_group.state_vars:
+        for svar in self.dep_vars_groups.state_vars:
             if svar.type == ElementaryType('address') or svar.type == ElementaryType('bytes32'):
                 owner_candidates.append(svar)
 
@@ -91,10 +85,10 @@ class ConditionNode(NodeExp):
             "expression": str(self.node.expression),
             "condition_type": str(self.condType),
             "msg": str(self.msg),
-            "state_vars":list(set([str(s) for s in self.all_read_vars_group.state_vars])),
-            "local_vars":list(set([str(s) for s in self.all_read_vars_group.local_vars])),
-            "solidity_vars":list(set([str(s) for s in self.all_read_vars_group.solidity_vars])),
-            "constant_vars":list(set([str(s) for s in self.all_read_vars_group.constant_vars])),
+            "state_vars":list(set([str(s) for s in self.dep_vars_groups.state_vars])),
+            "local_vars":list(set([str(s) for s in self.dep_vars_groups.local_vars])),
+            "solidity_vars":list(set([str(s) for s in self.dep_vars_groups.solidity_vars])),
+            "constant_vars":list(set([str(s) for s in self.dep_vars_groups.constant_vars])),
         }
     def __str__(self):
-        return "node: {},msg: {}, \n{}".format(self.node,self.msg,self.all_read_vars_group)
+        return "node: {},msg: {}, \n{}".format(self.node,self.msg,self.dep_vars_groups)

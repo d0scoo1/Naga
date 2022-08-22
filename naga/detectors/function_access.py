@@ -111,8 +111,8 @@ def _is_owner(svar,owners,written_functions):
         if f.is_constructor_or_initializer: continue
         # 如果存在一个 condition 读取了 owners 和 msg.sender
         if any(
-            SolidityVariableComposed('msg.sender') in cond.all_read_vars_group.solidity_vars 
-            and set(cond.all_read_vars_group.state_vars) & set(t_owners) != set()
+            SolidityVariableComposed('msg.sender') in cond.dep_vars_groups.solidity_vars 
+            and set(cond.dep_vars_groups.state_vars) & set(t_owners) != set()
             for cond in f.conditions
         ):
             continue
@@ -128,8 +128,8 @@ def _is_written_by_other_owner(svar,owners,written_functions):
         if f.is_constructor_or_initializer: continue
         # 如果存在一个 condition 读取了 owners 和 msg.sender
         if any(
-            SolidityVariableComposed('msg.sender') in cond.all_read_vars_group.solidity_vars 
-            and set(cond.all_read_vars_group.state_vars) & set(t_owners) != set()
+            SolidityVariableComposed('msg.sender') in cond.dep_vars_groups.solidity_vars 
+            and set(cond.dep_vars_groups.state_vars) & set(t_owners) != set()
             for cond in f.conditions
         ):
             continue
@@ -152,9 +152,9 @@ def _detect_bwList(self):
         if not _is_written_by_other_owner(svar,owners,self.state_var_written_functions_dict[svar]):
             continue
         if any(
-            svar in cond.all_read_vars_group.state_vars
+            svar in cond.dep_vars_groups.state_vars
             for cond in twf_conditions
-        ): # 如果出现在 token_written_functions 中，注意，这里并没有校验 msg.sender # SolidityVariableComposed('msg.sender') in cond.all_read_vars_group.solidity_vars 
+        ): # 如果出现在 token_written_functions 中，注意，这里并没有校验 msg.sender # SolidityVariableComposed('msg.sender') in cond.dep_vars_groups.solidity_vars 
             _set_state_vars_label(self,'bwList',[svar])
 
 
