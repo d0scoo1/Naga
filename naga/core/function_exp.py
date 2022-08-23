@@ -145,7 +145,7 @@ class FunctionExp():
     def return_var_group(self) -> VariableGroup:
         if self._return_var_group is not None: return self._return_var_group
 
-        self._return_var_group = var_group_combine([exp_node.all_read_vars_group for exp_node in self.return_nodes])
+        self._return_var_group = var_group_combine([exp_node.dep_vars_groups for exp_node in self.return_nodes])
         return self._return_var_group
 
     def __str__(self) -> str:

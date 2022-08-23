@@ -11,8 +11,8 @@ ERC721_WRITE_FUNCS_SIG = ["safeTransferFrom(address,address,uint256)","transferF
 ERC1155_WRITE_FUNCS_SIG = ["setApprovalForAll(address,bool)","safeTransferFrom(address,address,uint256,uint256,bytes)","safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)"]
 
 from naga.detectors import (
-        FunctionAccess,Pause,ERCMetaData,TradingParams,LackEvent,)
-
+        AccessControl,Pause,ERCMetadata,TradingParams,LackEvent,)
+from naga.detectors.abstract_detector import(StateVarExp)
 class ContractExp():
     def __init__(self,contract:Contract,nagaObj) -> None:
         self.contract = contract
@@ -86,6 +86,9 @@ class ContractExp():
 
     def _before_detect(self):
         self._dividing_functions()
+        self.exp_svars_dict = dict() # svar:StateVariable -> (label:str, rw:str)
+        for svar in self.all_state_vars:
+            self.exp_svars_dict[svar] = StateVarExp(svar)
 
     def _after_detect(self):
         '''
@@ -116,13 +119,13 @@ class ContractExp():
         '''
         在其他的 detector 执行前，我们需要
         1. 划分需要的 function 分类
-        2. 检测 owner 权限 (FunctionAccess, 顺便检测了出了 bwList 和部分 paused)
+        2. 检测 owner 权限 (AccessControl, 顺便检测了出了 bwList 和部分 paused)
         3. 根据检测结果，划分变量为 user, owner 的读写权限
         '''
         self.detectors =[
-            FunctionAccess(self), # 必须是第一个，它包含初始化和其他 detectors 依赖的信息
+            AccessControl(self), # 必须是第一个，它包含初始化和其他 detectors 依赖的信息
             Pause(self),
-            ERCMetaData(self,erc),
+            ERCMetadata(self,erc),
             TradingParams(self),
             LackEvent(self),
         ]
@@ -152,7 +155,6 @@ class ContractExp():
                 self.state_var_read_functions.append(f)
             if len(f.function.all_state_variables_written()) > 0:
                 self.state_var_written_functions.append(f)
-        
         
         # Get all transfer functions
         for f in self.functions:

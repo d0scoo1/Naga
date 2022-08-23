@@ -1,31 +1,103 @@
 import abc
 from typing import Optional, List, TYPE_CHECKING, Dict, Union, Callable
+from enum import Enum
 
+class VarLabel(Enum):
+    # AC
+    owner = 'owner'
+    role = 'role'
+    # LL
+    paused = 'paused'
+    blacklist = 'blacklist'
+    # VS
+    _totalSupply = 'totalSupply'
+    # MM
+    _name = 'name'
+    _symbol = 'symbol'
+    _decimals = 'decimals'
+    _uri = 'uri'
+    # ME
+    param = 'param'
+
+    _balances = 'balances'
+    _allowances = 'allowances'
+    _owners = 'owners'
+    _tokenApprovals = 'tokenApprovals'
+    _operatorApprovals = 'operatorApprovals'
+
+    def __str__(self):
+        return self.value
+
+class DType(Enum): # detection type
+    ACCESS_CONTROL = 'AC'
+    LIMITED_LIQUIDITY = 'LL'
+    VULNERABLE_SCARCITY = 'VS'
+    MUTABLE_METADATA = 'MM'
+    MUTABLE_PARAMETERS = 'MP'
+    MISSING_EVENTS = 'ME'
+
+    METADATA = 'metadata'
+    PARAMETERS = 'parameters'
+    UNDEFINED = 'undefined'
+
+    def __str__(self):
+        return self.value
+
+class DMethod(Enum): # detection method
+    INHERITANCE = 'i'
+    MODIFIER = 'm'
+    GETTER = 'g'
+    NAME = 'n'
+    DEPENDENCY = 'd'
+
+    def __str__(self):
+        return self.value
+
+class StateVarExp():
+    def __init__(self,svar, label = None, dType = None):
+        self.svar = svar
+        self.label:VarLabel = label
+        self.rw = '0000'
+        self.dType:DType = dType
+        self.dMethods:DMethod = {
+            DMethod.INHERITANCE: False, # inheritance
+            DMethod.MODIFIER: False, # modifier
+            DMethod.GETTER: False, # getter
+            DMethod.NAME: False, # name
+            DMethod.DEPENDENCY: False  # dependency
+        }
+    def set_detection(self,label:VarLabel, dType:DType, dMethod:DMethod):
+        self.label = label
+        self.dType = dType
+        self.dMethods[dMethod] = True
+    
+    def __str__(self):
+        return '{}: {}, {}, \t{}'.format(self.svar,self.label,self.dType,':'.join(['{}:{}'.format(k,v) for k,v in self.dMethods.items()]))
 
 ### 我们使用这一部分来管理变量的标签 ###
-def _init_state_vars_label(self):
-    self.exp_svars_dict = dict() # svar:StateVariable -> (label:str, rw:str)
-    for svar in self.all_state_vars:
-        self.exp_svars_dict[svar] = {'label': 'no_label','rw': '0000',}
 
-def _set_state_vars_label(self,label,svars):
+def _set_state_vars_label(self,svars, label:VarLabel,dType:DType,dMethod:DMethod):
     for svar in svars:
-        self.exp_svars_dict[svar]['label'] = label
+        self.exp_svars_dict[svar].label = label
+        self.exp_svars_dict[svar].dType = dType
+        self.exp_svars_dict[svar].dMethods[dMethod] = True
 
-def _get_no_label_svars(self, svars):
-    no_label_svars = [svar for svar in self.exp_svars_dict if self.exp_svars_dict[svar]['label'] == 'no_label']
-    return [svar for svar in svars if svar in no_label_svars]
+def _get_no_label_svars(self,):
+    return [svar for svar in self.exp_svars_dict if self.exp_svars_dict[svar].label == None]
 
 def _get_label_svars(self, label):
-    return [svar for svar in self.exp_svars_dict if self.exp_svars_dict[svar]['label'] == label]
+    return [svar for svar in self.exp_svars_dict if self.exp_svars_dict[svar].label == label]
+
+def _get_dtype_svars(self, dtype):
+    return [svar for svar in self.exp_svars_dict if self.exp_svars_dict[svar].dType == dtype]
 
 class AbstractDetector(metaclass=abc.ABCMeta):
 
     def __init__(
-        self, naga:"Naga"
+        self, cexp
     ):
         
-        self.naga: "Naga" = naga
+        self.cexp = cexp
 
     @abc.abstractmethod
     def _detect(self):
