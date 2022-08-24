@@ -58,6 +58,8 @@
     ],
 }
 """
+from naga.detectors import (VarLabel, DType, DMethod)
+from naga.detectors.abstract_detector import _get_label_svars,_get_dtype_svars
 
 def base_info(self):
     info = {}
@@ -69,46 +71,26 @@ def base_info(self):
     })
     return info
 
-from naga.openzeppelin import (ERC20_STATE_VARIAVLES, ERC721_STATE_VARIAVLES, ERC1155_STATE_VARIAVLES)
-
-def get_common_labels():
-    return ['owner', 'role', 'bwList', 'paused','immutable_trading_param','mutable_trading_param']
-def get_svar_labels():
-    svar_labels = []
-    for s in ERC20_STATE_VARIAVLES + ERC721_STATE_VARIAVLES + ERC1155_STATE_VARIAVLES:
-        if s not in svar_labels:
-            svar_labels.append(s[0])
-    return svar_labels
 
 def state_variable_summary(self):
     summary = {
-        'state_variables': [],
-        'state_variables_label': {},
+        'svars': [],
+        'svars_detection': {},
+        'svars_label': {},
         'multistage_owners': [],
         'state_variables_label_rw': {},
         #'state_variables_rw': {},
     }
 
-    for k,v in self.exp_svars_dict.items():
-        summary['state_variables'].append({
-            'name': str(k),
-            'type': str(k.type),
-            'label': v['label'],
-            'rw': v['rw'],
-        })
-    
-    for svar_label in get_common_labels() + get_svar_labels():
-        summary['state_variables_label'][svar_label] = [str(svar) for svar in self.exp_svars_dict if self.exp_svars_dict[svar]['label'] == svar_label]
-    summary['state_variables_label']['access'] = summary['state_variables_label']['owner'] + summary['state_variables_label']['role']
+    for svar in self.exp_svars_dict.values(): 
+        summary['svars'].append(svar.toJson())
+
+    for dt in DType: 
+        summary['svars_detection'][dt.value] = [svar.name for svar in _get_dtype_svars(self, dt)]
+    for label in VarLabel: 
+        summary['svars_label'][label.value] = [svar.name for svar in _get_label_svars(self, label)]
 
     summary['multistage_owners'] = [svar.name for svar in self.multistage_owners]
-
-    for svar_label in get_svar_labels():
-        svars = [svar for svar in self.exp_svars_dict if self.exp_svars_dict[svar]['label'] == svar_label]
-        if len(svars) > 0:
-            summary['state_variables_label_rw'][svar_label] = self.exp_svars_dict[svars[0]]['rw']
-        else:
-            summary['state_variables_label_rw'][svar_label] = '0000'
 
     return summary
 
@@ -130,11 +112,7 @@ def function_summary(self):
     return summary
 
 def modifier_summary(self):
-    summary = {'all_modifiers':[],
-    'access_modifiers':[ m.name for m in self.access_modifiers],
-    'onlyOwner_modifiers':[svar.name for svar in self.onlyOwner_modifiers],
-    'onlyRole_modifiers':[svar.name for svar in self.onlyRole_modifiers],
-    }
+    summary = {'all_modifiers':[]}
 
     for m in self.contract.modifiers:
         modifier = {
@@ -161,62 +139,33 @@ def lack_event_summary(self):
 
     lack_event_user_erc_svars = dict() # 查找用户是写了什么变量
     lack_event_owner_erc_svars = dict() # 检查 owner 写了什么变量没有提示
-    for svar_label in get_common_labels() + get_svar_labels():
-        lack_event_user_erc_svars[svar_label] = []
-        lack_event_owner_erc_svars[svar_label] = []
-    lack_event_user_erc_svars['no_label'] = []
-    lack_event_owner_erc_svars['no_label'] = []
+    
+    for dt in DType:
+        lack_event_user_erc_svars[dt.value] = []
+        lack_event_owner_erc_svars[dt.value] = []
+    lack_event_user_erc_svars['None'] = []
+    lack_event_owner_erc_svars['None'] = []
     for f in self.lack_event_user_functions:
         for svar in f.function.all_state_variables_written():
             exp_svar = self.exp_svars_dict[svar]
-            if exp_svar['label'] != 'no_label':
-                lack_event_user_erc_svars[exp_svar['label']].append({"function":f.function.full_name, "svar":svar.name})
+            if exp_svar.dType != None:
+                lack_event_user_erc_svars[exp_svar.dType.value].append({"function":f.function.full_name, "svar":svar.name})
             else:
-                lack_event_user_erc_svars['no_label'].append({"function":f.function.full_name, "svar":svar.name})
+                lack_event_user_erc_svars['None'].append({"function":f.function.full_name, "svar":svar.name})
     for f in self.lack_event_owner_functions:
         for svar in f.function.all_state_variables_written():
             exp_svar = self.exp_svars_dict[svar]
-            if exp_svar['label'] != 'no_label':
-                lack_event_owner_erc_svars[exp_svar['label']].append({"function":f.function.full_name, "svar":svar.name})
+            if exp_svar.dType != None:
+                lack_event_owner_erc_svars[exp_svar.dType.value].append({"function":f.function.full_name, "svar":svar.name})
             else:
-                lack_event_owner_erc_svars['no_label'].append({"function":f.function.full_name, "svar":svar.name})
-    lack_event_owner_erc_svars['access'] = lack_event_owner_erc_svars['owner'] + lack_event_owner_erc_svars['role']
+                lack_event_owner_erc_svars['None'].append({"function":f.function.full_name, "svar":svar.name})
+    
     summary['LE_user_svars'] = lack_event_user_erc_svars
     summary['LE_owner_svars'] = lack_event_owner_erc_svars
-    
+
     for f in self.lack_event_functions:
         for svar in f.function.all_state_variables_written():
-            summary['LE_rw'][self.exp_svars_dict[svar]['rw']].append({"function":f.function.full_name, "svar":svar.name})
-
-    return summary
-
-def detect_method_summary(self):
-    summary ={
-        #openzeppelin 直接检测出的 owner / role, paused
-        'inheritance_detected':{},
-        # modifier 直接检测出的 owner / role
-        'modifier_detected':{
-            'owner':[svar.name for svar in self.modifiers_detected_owners],
-            'role':[svar.name for svar in self.modifiers_detected_roles],
-        },
-        'im_detected':{
-            'owner':[],
-            'role':[],
-        },
-        'detect_erc_state_vars_by_return':[],
-        'detect_erc_state_vars_by_name':[],
-    }
-
-    for label,svars in self.inheritance_detected_svars.items():
-        summary['inheritance_detected'][label] = [svar.name for svar in svars]
-    
-    ### 不同的contracts 可能存在相同的 stateVariable name，因此不能直接使用变量名来 list(set())
-    summary['im_detected']['owner'] = [svar.name for svar in list(set(self.modifiers_detected_owners + self.inheritance_detected_svars['owner']))]
-    summary['im_detected']['role'] = [svar.name for svar in list(set(self.modifiers_detected_roles + self.inheritance_detected_svars['role']))]
-    
-
-    summary['detect_erc_state_vars_by_return'] = [svar.name for svar in self.detect_erc_state_vars_by_return]
-    summary['detect_erc_state_vars_by_name'] = [svar.name for svar in self.detect_erc_state_vars_by_name]
+            summary['LE_rw'][self.exp_svars_dict[svar].rw].append({"function":f.function.full_name, "svar":svar.name})
 
     return summary
 
@@ -227,5 +176,4 @@ def contract_summary(self):
     summary.update(function_summary(self))
     summary.update(modifier_summary(self))
     summary.update(lack_event_summary(self))
-    summary.update(detect_method_summary(self))
     return summary

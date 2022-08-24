@@ -7,26 +7,26 @@ ERC20_STATE_VARIAVLES = [
     (VarLabel._name,DType.METADATA,'name()', 'string', ['name']),
     (VarLabel._symbol,DType.METADATA,'symbol()', 'string', ['symbol']),
     (VarLabel._decimals,DType.METADATA,'decimals()', 'uint', ['decimals','decimal']),
-    (VarLabel._totalSupply,DType.UNDEFINED,'totalSupply()', 'uint', ['totalsupply','supply']),
-    (VarLabel._balances,DType.UNDEFINED,'balanceOf(address)', 'mapping(address => uint256)', ['balances','balance']),
-    (VarLabel._allowances,DType.UNDEFINED,'allowance(address,address)','mapping(address => mapping(address => uint256))',['allowances','allowance']),
+    (VarLabel._totalSupply,DType.ASSET,'totalSupply()', 'uint', ['totalsupply','supply']),
+    (VarLabel._balances,DType.ASSET,'balanceOf(address)', 'mapping(address => uint256)', ['balances','balance']),
+    (VarLabel._allowances,DType.ASSET,'allowance(address,address)','mapping(address => mapping(address => uint256))',['allowances','allowance']),
 ]
 
 ERC721_STATE_VARIAVLES = [
     (VarLabel._name,DType.METADATA,'name()', 'string',  ['name']),
     (VarLabel._symbol,DType.METADATA,'symbol()', 'string',['symbol']),
-    (VarLabel._owners,DType.UNDEFINED,'ownerOf(uint256)','mapping(uint256 => address)',['owners'],), # 这个owner不是管理员 owner
-    (VarLabel._balances,DType.UNDEFINED,'balanceOf(address)','mapping(address => uint256)',['balances','balance']),
-    (VarLabel._tokenApprovals,DType.UNDEFINED,'getApproved(uint256)','mapping(address => uint256)',['tokenapprovals','tokenapproval']),
-    (VarLabel._operatorApprovals,DType.UNDEFINED,'isApprovedForAll(address, address)','mapping(address => mapping(address => bool))',['operatorapprovals','operatorapproval']),
+    (VarLabel._owners,DType.ASSET,'ownerOf(uint256)','mapping(uint256 => address)',['owners'],), # 这个owner不是管理员 owner
+    (VarLabel._balances,DType.ASSET,'balanceOf(address)','mapping(address => uint256)',['balances','balance']),
+    (VarLabel._tokenApprovals,DType.ASSET,'getApproved(uint256)','mapping(address => uint256)',['tokenapprovals','tokenapproval']),
+    (VarLabel._operatorApprovals,DType.ASSET,'isApprovedForAll(address, address)','mapping(address => mapping(address => bool))',['operatorapprovals','operatorapproval']),
     (VarLabel._uri,'tokenURI(uint256)','string',['baseuri','uri'])
 ]
 
 ERC1155_STATE_VARIAVLES = [
-    (VarLabel._balances,DType.UNDEFINED,'balanceOf(address, uint256)','mapping(uint256 => mapping(address => uint256))',['balances','balance']),
-    (VarLabel._operatorApprovals,DType.UNDEFINED,'isApprovedForAll(address, address)','mapping(address => mapping(address => bool))',['_operatorapprovals','operatorapproval']),
+    (VarLabel._balances,DType.ASSET,'balanceOf(address, uint256)','mapping(uint256 => mapping(address => uint256))',['balances','balance']),
+    (VarLabel._operatorApprovals,DType.ASSET,'isApprovedForAll(address, address)','mapping(address => mapping(address => bool))',['_operatorapprovals','operatorapproval']),
     (VarLabel._uri,DType.METADATA,'uri(uint256)','string',['uri']),
-    (VarLabel._totalSupply,DType.UNDEFINED,'totalSupply()', 'mapping(uint256 => uint256)', ['totalsupply','supply'])
+    (VarLabel._totalSupply,DType.ASSET,'totalSupply()', 'mapping(uint256 => uint256)', ['totalsupply','supply'])
 ]
 
 exclude_stateVaribles = [

@@ -23,7 +23,7 @@ def detect_paused(self):
 
 class Pause(AbstractDetector):
     def _detect(self):
-        detect_paused(self.naga)
+        detect_paused(self.cexp)
 
     def summary(self):
         return {}

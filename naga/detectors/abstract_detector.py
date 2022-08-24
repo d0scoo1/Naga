@@ -38,7 +38,7 @@ class DType(Enum): # detection type
 
     METADATA = 'metadata'
     PARAMETERS = 'parameters'
-    UNDEFINED = 'undefined'
+    ASSET = 'asset'
 
     def __str__(self):
         return self.value
@@ -73,6 +73,16 @@ class StateVarExp():
     
     def __str__(self):
         return '{}: {}, {}, {}, \t{}'.format(self.svar,self.label,self.rw,self.dType,':'.join(['{}:{}'.format(k,v) for k,v in self.dMethods.items()]))
+
+    def toJson(self):
+        return {
+            'name':self.svar.name,
+            'type':str(self.svar.type),
+            'label':str(self.label),
+            'rw':self.rw,
+            'dType':str(self.dType),
+            'dMethods':{ k.value:v for k,v in self.dMethods.items() }
+        }
 
 ### 我们使用这一部分来管理变量的标签 ###
 
