@@ -21,6 +21,8 @@ class ContractExp():
         self._is_erc721: Optional[bool] = None
         self._is_erc1155: Optional[bool] = None
         self.info = dict()
+        self.is_analyzed = False
+        self._summary = None
 
     def set_info(self, info):
         '''
@@ -84,34 +86,30 @@ class ContractExp():
     ####        Detect  Functions      ####
     #######################################
 
-    def _before_detect(self):
+    def analysis(self):
         self._dividing_functions()
         self.exp_svars_dict = dict() # svar:StateVariable -> (label:str, rw:str)
         for svar in self.all_state_vars:
             self.exp_svars_dict[svar] = StateVarExp(svar)
-
-    def _after_detect(self):
-        '''
-        检测结束后，输出 summary
-        '''
-
-        self._summary = None
+        ac = AccessControl(self) # 必须是第一个，它包含初始化和其他 detectors 依赖的信息
+        ac.detect()
+        self.is_analyzed = True
 
     def detect(self,erc_force = None):
         self.erc_force = erc_force
         erc = self.get_erc_str
         if erc_force is not None: erc = erc_force
-
-        self._before_detect()
-
+        
         '''
         在其他的 detector 执行前，我们需要
         1. 划分需要的 function 分类
         2. 检测 owner 权限 (AccessControl, 顺便检测了出了 bwList 和部分 paused)
         3. 根据检测结果，划分变量为 user, owner 的读写权限
         '''
+        if  not self.is_analyzed:
+            self.analysis()
+        
         self.detectors =[
-            AccessControl(self), # 必须是第一个，它包含初始化和其他 detectors 依赖的信息
             Pause(self),
             ERCMetadata(self,erc),
             TradingParams(self),
@@ -120,7 +118,6 @@ class ContractExp():
         for detector in self.detectors:
             detector.detect()
 
-        self._after_detect()
 
     def _dividing_functions(self):
         self.functions: List["FunctionExp"] = [] # All entry functions
@@ -232,7 +229,7 @@ class ContractExp():
                 f.write(summary_json)
             f.close()
         return summary_json
-    
+
     '''
     def summary_csv(self):
         return self.contract_summary2csv()

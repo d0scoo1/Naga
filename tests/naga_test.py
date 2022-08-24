@@ -36,19 +36,19 @@ class NagaTest():
             s_end_time = time.time()
             self.contract['slither_compile_cost'] = s_end_time - s_start_time
         except FunctionTimedOut:
-            self._write_error('slither_timeout')
+            self._write_error('slither_Timeout')
             return
         except:
-            self._write_error('slither_compileError')
+            self._write_error('slither_CompileError')
             return
 
         try:
             naga_contract = self._naga_test(slither)
         except FunctionTimedOut:
-            self._write_error('naga_timeout')
+            self._write_error('naga_Timeout')
             return
         except:
-            self._write_error('naga_error')
+            self._write_error('naga_Error')
             return
 
         return naga_contract
@@ -58,7 +58,10 @@ class NagaTest():
         n_start_time = time.time()
         naga = Naga(slither,contract_name= self.contract['name'])
         if len(naga.entry_contracts) == 0: 
-            self._write_error('naga_noEntryContract')
+            self._write_error('naga_NoEntryContract')
+            return
+        if len(naga.entry_contracts) > 1: 
+            self._write_error('naga_ToManyEntryContracts')
             return
         naga_contract = naga.entry_contracts[0]
         if self.contract['erc_force'] != None:
@@ -66,7 +69,7 @@ class NagaTest():
         elif naga_contract.is_erc:
             naga_contract.detect()
         else:
-            self._write_error('naga_isNotERC')
+            self._write_error('naga_IsNotERC')
             return
         n_end_time = time.time()
         self.contract['naga_test_cost'] = n_end_time - n_start_time
@@ -152,17 +155,20 @@ def _count_errors(output_dir):
     naga_errors = []
     naga_not_erc = []
     naga_no_entry = []
+    naga_too_many_entry = []
     naga_timeout = []
     
     slither_timeout = []
     slither_compileError = []
     for c in os.listdir(os.path.join(output_dir,'errors')):
         if c[43:].startswith('naga'): 
-            if c[43:].endswith('isNotERC'):
+            if c[43:].endswith('IsNotERC'):
                 naga_not_erc.append(c[:42])
-            elif c[43:].endswith('noEntryContract'):
+            elif c[43:].endswith('NoEntryContract'):
                 naga_no_entry.append(c[:42])
-            elif c[43:].endswith('timeout'):
+            elif c[43:].endswith('ToManyEntryContracts'):
+                naga_too_many_entry.append(c[:42])
+            elif c[43:].endswith('Timeout'):
                 naga_timeout.append(c[:42])
             else:
                 naga_errors.append(c[:42])
@@ -175,6 +181,7 @@ def _count_errors(output_dir):
     print('naga_errors:',len(naga_errors))
     print('naga_not_erc:',len(naga_not_erc))
     print('naga_no_entry:',len(naga_no_entry))
+    print('naga_too_many_entry:',len(naga_too_many_entry))
     print('naga_timeout:',len(naga_timeout))
     print('slither_timeout:',len(slither_timeout))
     print('slither_compileError:',len(slither_compileError))

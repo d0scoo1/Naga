@@ -1,5 +1,6 @@
 from typing import List, Dict,Optional
 from slither.core.variables.state_variable import StateVariable
+from slither.slithir.variables.state_variable import StateIRVariable
 from .abstract_detector import (AbstractDetector, VarLabel, DType, DMethod,_set_state_vars_label,_get_no_label_svars,_get_label_svars, _get_dtype_svars)
 
 #  state variable name, return function signature, type, possible names (lower names)
@@ -19,7 +20,7 @@ ERC721_STATE_VARIAVLES = [
     (VarLabel._balances,DType.ASSET,'balanceOf(address)','mapping(address => uint256)',['balances','balance']),
     (VarLabel._tokenApprovals,DType.ASSET,'getApproved(uint256)','mapping(address => uint256)',['tokenapprovals','tokenapproval']),
     (VarLabel._operatorApprovals,DType.ASSET,'isApprovedForAll(address, address)','mapping(address => mapping(address => bool))',['operatorapprovals','operatorapproval']),
-    (VarLabel._uri,'tokenURI(uint256)','string',['baseuri','uri'])
+    (VarLabel._uri,DType.METADATA,'tokenURI(uint256)','string',['baseuri','uri'])
 ]
 
 ERC1155_STATE_VARIAVLES = [
@@ -29,10 +30,12 @@ ERC1155_STATE_VARIAVLES = [
     (VarLabel._totalSupply,DType.ASSET,'totalSupply()', 'mapping(uint256 => uint256)', ['totalsupply','supply'])
 ]
 
+'''
 exclude_stateVaribles = [
     # type,name
     ('bytes16','_HEX_SYMBOLS')
 ]
+'''
 
 '''
     首先检测是否继承了ERC20或者ERC721或者ERC1155
@@ -60,7 +63,16 @@ def _detect_getter(self,ERC_METADATA):
             svars = return_fun.return_var_group.state_vars
             if len(svars) == 0: continue
             if len(svars) == 1:
+                # TODO: 依赖外部合约
                 _set_state_vars_label(self,svars,em[0],em[1],DMethod.GETTER)
+                '''
+                try:
+                    _set_state_vars_label(self,svars,em[0],em[1],DMethod.GETTER)
+                except:
+                    print('---',svars[0])
+                    for svar in self.exp_svars_dict:
+                        print(svar.name,svar.type, svar.contract)
+                '''
                 continue
 
             match_name = [svar for svar in svars if svar.name.lower().replace('_','') in em[4]]
@@ -106,17 +118,27 @@ def _detect_LL(self):
                         break
 
 def _totalSupply_limited(condition_nodes, total_supply):
+    '''
+    只要totalSupply 出现在 require 中，就认为是被限制的
+    '''
+    for n in condition_nodes:
+        if total_supply in n.state_variables_read:
+            return True
+    return False
+    '''
     for n in condition_nodes:
         if total_supply in n.state_variables_read and ('<' or '>' or '==' in str(n.expression)):
             uint_svars = [svar for svar in n.state_variables_read if str(svar.type).startswith('uint')]
             if len(uint_svars) >= 2:
                 return True
     return False
+    '''
 
 def _safeMath_add(irs,total_supply):
     for ir in irs:
         if isinstance(ir,LibraryCall) and ir.function_name == 'add':
-            for arg in ir.arguments:
+            svar_args = [svar for svar in ir.arguments if isinstance(svar, StateIRVariable)]
+            for arg in svar_args:
                 if arg._non_ssa_version == total_supply:
                     return True
     return False

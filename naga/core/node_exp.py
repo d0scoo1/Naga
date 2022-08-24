@@ -1,6 +1,7 @@
 from typing import List
 from slither.core.cfg.node import Node,NodeType
 from .variable_group import (VariableGroup,var_group_combine)
+from slither.core.declarations import Function
 from slither.slithir.operations import (
     HighLevelCall,Index,InternalCall,EventCall,Length,LibraryCall,LowLevelCall,Member,OperationWithLValue,Phi,PhiCallback,SolidityCall,Return,Operation,Condition,Transfer)
 
@@ -54,8 +55,8 @@ def dep_tracker(tainted_vars = [], dom_irs = [], walked_functions = set(), is_ca
         if isinstance(ir, (InternalCall,HighLevelCall)):
             #print("----internalcall",ir.function.full_name)
             if not is_call: dep_vars += ir.arguments # 对于首个调用函数，我们把参数也加入到 dep_vars 中
-            if ir.function.full_name in walked_functions: continue
-            walked_functions.add(ir.function.full_name)
+            if ir.function in walked_functions: continue
+            walked_functions.add(ir.function)
             dep_vars += call_track(ir,walked_functions)
         else:
             dep_vars += ir.read # 必须写在 walked_function检查前，防止自调用
@@ -63,6 +64,8 @@ def dep_tracker(tainted_vars = [], dom_irs = [], walked_functions = set(), is_ca
 
 def call_track(call_ir, walked_functions = []):
     dep_vars = []
+    if not isinstance(call_ir.function,Function): return [] # 0x196f4727526ea7fb1e17b2071b3d8eaa38486988  return trustedData.balance(holder);
+
     dom_irs = [ir for n in call_ir.function.nodes for ir in n.irs_ssa if n.type != NodeType.ENTRYPOINT]
 
     index = 0

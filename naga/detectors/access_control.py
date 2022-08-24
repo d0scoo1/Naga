@@ -14,7 +14,7 @@ openzeppelin_contracts = [
     #(VarLabel.role, DType.ACCESS_CONTROL,'IAccessControl','mapping(bytes32 => RoleData)','_roles'),#
     #(VarLabel.role, DType.ACCESS_CONTROL,'IAccessControl','mapping(bytes32 => AccessControl.RoleData)','_roles'), #
     #(VarLabel.role, DType.ACCESS_CONTROL,'IAccessControlEnumerable','mapping(bytes32 => EnumerableSet.AddressSet)','_roleMembers'),#
-    (DType.ACCESS_CONTROL,VarLabel.owner,'Ownable','address','_owner'),
+    (VarLabel.owner,DType.ACCESS_CONTROL,'Ownable','address','_owner'),
 
     (VarLabel.role, DType.ACCESS_CONTROL,'AccessControlUpgradeable','mapping(bytes32 => RoleData)','_roles'),
     (VarLabel.role, DType.ACCESS_CONTROL,'AccessControlUpgradeable','mapping(bytes32 => AccessControlUpgradeable.RoleData)','_roles'),

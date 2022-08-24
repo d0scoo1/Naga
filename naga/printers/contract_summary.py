@@ -173,7 +173,7 @@ def contract_summary(self):
     summary = {}
     summary.update(base_info(self))
     summary.update(state_variable_summary(self))
-    summary.update(function_summary(self))
+    #summary.update(function_summary(self))
     summary.update(modifier_summary(self))
     summary.update(lack_event_summary(self))
     return summary

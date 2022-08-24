@@ -88,6 +88,13 @@ class StateVarExp():
 
 def _set_state_vars_label(self,svars, label:VarLabel,dType:DType,dMethod:DMethod):
     for svar in svars:
+        if svar not in self.exp_svars_dict:
+            continue # Skip if not in the list
+            #print('[WARNING] {} not in exp_svars_dict'.format(svar))
+            #print(svar.canonical_name)
+            # TODO: 从其他合约中拿到变量信息
+            
+            #self.exp_svars_dict[svar] = StateVarExp(svar)
         self.exp_svars_dict[svar].label = label
         self.exp_svars_dict[svar].dType = dType
         if dMethod != None:

@@ -13,7 +13,6 @@ class Naga():
         self.contract_name = contract_name
         self._entry_contracts = None
 
-
     @property
     def entry_contracts(self):
         if self._entry_contracts is not None:
