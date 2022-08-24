@@ -1,6 +1,6 @@
 from .abstract_detector import AbstractDetector
 
-def detect_lack_event_functions(self):
+def detect_missing_event_functions(self):
     """
     Before Functions: detect_owners_bwList
     如果一个 function 写了 state variable，则应当发送一个 event，提醒用户，这里寻找缺少的 event 的 function。
@@ -20,9 +20,9 @@ def detect_lack_event_functions(self):
     self.lack_event_owner_functions = lack_event_owner_functions
     self.lack_event_user_functions = lack_event_user_functions
 
-class LackEvent(AbstractDetector):
+class MissingEvent(AbstractDetector):
     def _detect(self):
-        detect_lack_event_functions(self.naga)
+        detect_missing_event_functions(self.cexp)
 
     def summary(self):
         return {}

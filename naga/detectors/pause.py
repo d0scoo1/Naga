@@ -16,7 +16,7 @@ def detect_paused(self):
 
     paused = []
     for svar in list(set(paused_candidates)):
-        funcs_sigs = [f.function.full_name for f in self.state_var_read_in_condition_functions_dict[svar] ]
+        funcs_sigs = [f.function.full_name for f in self.state_var_read_in_condition_functions_dict[svar]]
         if len(set(funcs_sigs) & set(self.token_write_function_sigs)) > 0: # 如果变量 condition function 出现在 token 写函数中
             paused.append(svar)
     _set_state_vars_label(self,paused,VarLabel.paused,DType.LIMITED_LIQUIDITY,DMethod.DEPENDENCY)

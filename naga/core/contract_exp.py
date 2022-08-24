@@ -11,7 +11,7 @@ ERC721_WRITE_FUNCS_SIG = ["safeTransferFrom(address,address,uint256)","transferF
 ERC1155_WRITE_FUNCS_SIG = ["setApprovalForAll(address,bool)","safeTransferFrom(address,address,uint256,uint256,bytes)","safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)"]
 
 from naga.detectors import (
-        AccessControl,Pause,ERCMetadata,TradingParams,LackEvent,)
+        AccessControl,Pause,ERCMetadata,TradingParams,MissingEvent,)
 from naga.detectors.abstract_detector import(StateVarExp)
 class ContractExp():
     def __init__(self,contract:Contract,nagaObj) -> None:
@@ -94,19 +94,7 @@ class ContractExp():
         '''
         检测结束后，输出 summary
         '''
-        for svar in self.exp_svars_dict:
-            self.exp_svars_dict[svar]['rw'] = self.get_rw_str(svar)
-            '''
-            if self.exp_svars_dict[svar]['label'] == 'role':
-                print(svar)
-                fs_u_r,fs_u_w,fs_o_r,fs_o_w = self.get_svar_read_written_functions(svar)
-                #print(fs_u_r)
-                #print(fs_u_w)
-                for f in fs_u_r: print('    ur',f.function.full_name,f.function.contract_declarer)
-                for f in fs_u_w: print('    uw',f.function.full_name)
-                #print(fs_o_r)
-                #print(fs_o_w)
-            '''
+
         self._summary = None
 
     def detect(self,erc_force = None):
@@ -127,7 +115,7 @@ class ContractExp():
             Pause(self),
             ERCMetadata(self,erc),
             TradingParams(self),
-            LackEvent(self),
+            MissingEvent(self),
         ]
         for detector in self.detectors:
             detector.detect()
@@ -230,21 +218,6 @@ class ContractExp():
         if len(fs_o_w) > 0: rw_str += '1'
         else: rw_str += '0'
         return rw_str
-    '''
-    @property
-    def svar_rw_dict(self):
-        if self._svar_rw_dict is None:
-            self._svar_rw_dict = {}
-            for svar in self.all_state_vars:
-                self._svar_rw_dict[svar] = self.get_rw_str(svar)
-        return self._svar_rw_dict
-
-    def _svar2label(self):
-        self.svar_label_dict = {}
-        for label, svars in self.label_svars_dict.items():
-            for svar in svars:
-                self.svar_label_dict[svar] = label
-    '''
 
     from naga.printers import contract_summary
     @property

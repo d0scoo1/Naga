@@ -208,15 +208,16 @@ def detect_owners(self):
             owners.append(svar)
         owner_candidates.append(svar)
 
-    _detect_blacklist(self)
-    _multistage_owners(self)
-    _set_owner_in_condition_functions(self)
-    _divde_state_vars(self) # 要在_set_owner_in_condition_functions(self)后执行
 
 class AccessControl(AbstractDetector):
 
     def _detect(self):
         detect_owners(self.cexp)
+        _detect_blacklist(self.cexp)
+        _multistage_owners(self.cexp)
+        _set_owner_in_condition_functions(self.cexp)
+        _divde_state_vars(self.cexp) # 要在_set_owner_in_condition_functions(self)后执行
+        _update_exp_svars(self.cexp)
 
     def summary(self):
         return {}
@@ -273,3 +274,7 @@ def _divde_state_vars(self):
     self.state_vars_user_only_read = svars_user_only_read
     self.state_vars_user_only_read_owner_updated = svars_user_only_read_owner_updated
     self.state_vars_user_written_owner_updated = svars_user_written_owner_updated
+
+def _update_exp_svars(self):
+    for svar in self.exp_svars_dict:
+        self.exp_svars_dict[svar].rw = self.get_rw_str(svar)

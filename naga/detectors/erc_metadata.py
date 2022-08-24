@@ -1,6 +1,6 @@
 from typing import List, Dict,Optional
 from slither.core.variables.state_variable import StateVariable
-from .abstract_detector import (AbstractDetector, VarLabel, DType, DMethod,_set_state_vars_label,_get_no_label_svars,_get_label_svars)
+from .abstract_detector import (AbstractDetector, VarLabel, DType, DMethod,_set_state_vars_label,_get_no_label_svars,_get_label_svars, _get_dtype_svars)
 
 #  state variable name, return function signature, type, possible names (lower names)
 ERC20_STATE_VARIAVLES = [
@@ -73,6 +73,54 @@ def _detect_getter(self,ERC_METADATA):
                 _set_state_vars_label(self,match_type,em[0],em[1],DMethod.GETTER)
                 continue
 
+def _update_svar(self):
+    metadata = _get_dtype_svars(self,DType.METADATA)
+    for svar in metadata:
+        if self.exp_svars_dict[svar].rw[3] == '1':
+            self.exp_svars_dict[svar].dType = DType.MUTABLE_METADATA
+
+from slither.slithir.operations import LibraryCall
+def _detect_LL(self):
+    '''
+    1. totalSupply 是否为加法运算： + 或 maths.add() 运算
+    2. 是否被 require(totalsupply < uint) 限制
+    '''
+    for svar in _get_label_svars(self,VarLabel._totalSupply):
+        if self.exp_svars_dict[svar].rw[3] != '1': continue
+        # owner 保护的 totalSupply 写函数
+        written_functions = self.state_var_written_functions_dict[svar] # totalSupply = totalSupply + amount
+        read_functions = self.state_var_read_functions_dict[svar] # totalSupply.add(amount)
+        is_totalSupply_add = False
+        for f in written_functions:
+            for n in f.function.nodes:
+                if '+' in str(n.expression) and not 'require' in str(n.expression):
+                    if not _totalSupply_limited(f.all_condition_nodes,svar):
+                        _set_state_vars_label(self,[svar],VarLabel._totalSupply,DType.MUTABLE_METADATA,DMethod.DEPENDENCY)
+                        break
+        
+        for f in read_functions:
+            for n in f.function.nodes:
+                if '.add' in str(n.expression) and not 'require' in str(n.expression):
+                    if _safeMath_add(n.irs_ssa,svar) and not _totalSupply_limited(f.all_condition_nodes,svar):
+                        _set_state_vars_label(self,[svar],VarLabel._totalSupply,DType.MUTABLE_METADATA,DMethod.DEPENDENCY)
+                        break
+
+def _totalSupply_limited(condition_nodes, total_supply):
+    for n in condition_nodes:
+        if total_supply in n.state_variables_read and ('<' or '>' or '==' in str(n.expression)):
+            uint_svars = [svar for svar in n.state_variables_read if str(svar.type).startswith('uint')]
+            if len(uint_svars) >= 2:
+                return True
+    return False
+
+def _safeMath_add(irs,total_supply):
+    for ir in irs:
+        if isinstance(ir,LibraryCall) and ir.function_name == 'add':
+            for arg in ir.arguments:
+                if arg._non_ssa_version == total_supply:
+                    return True
+    return False
+
 
 def _detect_name(self,ERC_METADATA):
     no_label_svars = _get_no_label_svars(self)
@@ -104,8 +152,9 @@ class ERCMetadata(AbstractDetector):
     def _detect(self):
         _detect_inheritance(self.cexp,self.token,self.ERC_METADATA)
         _detect_getter(self.cexp,self.ERC_METADATA)
-        #_detect_name(self.cexp,self.ERC_METADATA)
-        #_update_state_vars_(self.cexp)
+        _detect_name(self.cexp,self.ERC_METADATA)
+        _detect_LL(self.cexp)
+        _update_svar(self.cexp)
 
     def summary(self):
         return {}

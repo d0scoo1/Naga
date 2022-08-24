@@ -72,7 +72,7 @@ class StateVarExp():
         self.dMethods[dMethod] = True
     
     def __str__(self):
-        return '{}: {}, {}, \t{}'.format(self.svar,self.label,self.dType,':'.join(['{}:{}'.format(k,v) for k,v in self.dMethods.items()]))
+        return '{}: {}, {}, {}, \t{}'.format(self.svar,self.label,self.rw,self.dType,':'.join(['{}:{}'.format(k,v) for k,v in self.dMethods.items()]))
 
 ### 我们使用这一部分来管理变量的标签 ###
 
@@ -80,7 +80,8 @@ def _set_state_vars_label(self,svars, label:VarLabel,dType:DType,dMethod:DMethod
     for svar in svars:
         self.exp_svars_dict[svar].label = label
         self.exp_svars_dict[svar].dType = dType
-        self.exp_svars_dict[svar].dMethods[dMethod] = True
+        if dMethod != None:
+            self.exp_svars_dict[svar].dMethods[dMethod] = True
 
 def _get_no_label_svars(self,):
     return [svar for svar in self.exp_svars_dict if self.exp_svars_dict[svar].label == None]
