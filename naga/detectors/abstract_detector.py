@@ -54,8 +54,9 @@ class DMethod(Enum): # detection method
         return self.value
 
 class StateVarExp():
-    def __init__(self,svar, label = None, dType = None):
+    def __init__(self,svar, label = None, dType = None,external = False,callers = []):
         self.svar = svar
+        self.name = svar.canonical_name
         self.label:VarLabel = label
         self.rw = '0000'
         self.dType:DType = dType
@@ -66,35 +67,30 @@ class StateVarExp():
             DMethod.NAME: False, # name
             DMethod.DEPENDENCY: False  # dependency
         }
-    def set_detection(self,label:VarLabel, dType:DType, dMethod:DMethod):
-        self.label = label
-        self.dType = dType
-        self.dMethods[dMethod] = True
+        self.external = external # 是否为 address 调用的外部变量
+        self.callers = callers # 外部调用者
     
     def __str__(self):
-        return '{}: {}, {}, {}, \t{}'.format(self.svar,self.label,self.rw,self.dType,':'.join(['{}:{}'.format(k,v) for k,v in self.dMethods.items()]))
+        return '{}: {}, {}, {}, \t{}'.format(self.name,self.label,self.rw,self.dType,':'.join(['{}:{}'.format(k,v) for k,v in self.dMethods.items()]))
 
     def toJson(self):
         return {
-            'name':self.svar.name,
+            'name':self.name,
             'type':str(self.svar.type),
             'label':str(self.label),
             'rw':self.rw,
             'dType':str(self.dType),
-            'dMethods':{ k.value:v for k,v in self.dMethods.items() }
+            'dMethods':{ k.value:v for k,v in self.dMethods.items()},
+            'external':self.external,
         }
 
 ### 我们使用这一部分来管理变量的标签 ###
 
-def _set_state_vars_label(self,svars, label:VarLabel,dType:DType,dMethod:DMethod):
+def _set_state_vars_label(self,svars, label:VarLabel,dType:DType,dMethod:DMethod,caller_dict = {}):
     for svar in svars:
         if svar not in self.exp_svars_dict:
-            continue # Skip if not in the list
             #print('[WARNING] {} not in exp_svars_dict'.format(svar))
-            #print(svar.canonical_name)
-            # TODO: 从其他合约中拿到变量信息
-            
-            #self.exp_svars_dict[svar] = StateVarExp(svar)
+            self.exp_svars_dict[svar] = StateVarExp(svar,external = True, callers = caller_dict[svar])
         self.exp_svars_dict[svar].label = label
         self.exp_svars_dict[svar].dType = dType
         if dMethod != None:
@@ -126,5 +122,5 @@ class AbstractDetector(metaclass=abc.ABCMeta):
         self._detect()
 
     @abc.abstractmethod
-    def summary(self) -> Dict[str, Union[str, List[str]]]:
+    def output(self) -> Dict[str, Union[str, List[str]]]:
         """TODO Documentation"""

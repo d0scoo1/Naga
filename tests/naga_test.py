@@ -57,13 +57,12 @@ class NagaTest():
     def _naga_test(self,slither):
         n_start_time = time.time()
         naga = Naga(slither,contract_name= self.contract['name'])
-        if len(naga.entry_contracts) == 0: 
+        
+        if naga.main_contract == None:
             self._write_error('naga_NoEntryContract')
             return
-        if len(naga.entry_contracts) > 1: 
-            self._write_error('naga_ToManyEntryContracts')
-            return
-        naga_contract = naga.entry_contracts[0]
+
+        naga_contract = naga.main_contract
         if self.contract['erc_force'] != None:
             naga_contract.detect(erc_force= self.contract['erc_force'])
         elif naga_contract.is_erc:
@@ -155,7 +154,6 @@ def _count_errors(output_dir):
     naga_errors = []
     naga_not_erc = []
     naga_no_entry = []
-    naga_too_many_entry = []
     naga_timeout = []
     
     slither_timeout = []
@@ -166,8 +164,6 @@ def _count_errors(output_dir):
                 naga_not_erc.append(c[:42])
             elif c[43:].endswith('NoEntryContract'):
                 naga_no_entry.append(c[:42])
-            elif c[43:].endswith('ToManyEntryContracts'):
-                naga_too_many_entry.append(c[:42])
             elif c[43:].endswith('Timeout'):
                 naga_timeout.append(c[:42])
             else:
@@ -181,12 +177,11 @@ def _count_errors(output_dir):
     print('naga_errors:',len(naga_errors))
     print('naga_not_erc:',len(naga_not_erc))
     print('naga_no_entry:',len(naga_no_entry))
-    print('naga_too_many_entry:',len(naga_too_many_entry))
     print('naga_timeout:',len(naga_timeout))
     print('slither_timeout:',len(slither_timeout))
     print('slither_compileError:',len(slither_compileError))
 
-def run(input_dir,output_dir, erc_force = None, process_num = 50):
+def run(input_dir,output_dir, erc_force = None, process_num = 65):
     print('input_dir:',input_dir)
     print('output_dir:',output_dir)
     naga_results_dir = os.path.join(output_dir,'results')

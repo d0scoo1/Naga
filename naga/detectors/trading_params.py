@@ -28,5 +28,5 @@ def detect_trading_params(self):
 class TradingParams(AbstractDetector):
     def _detect(self):
         detect_trading_params(self.cexp)
-    def summary(self):
+    def output(self):
         return {}

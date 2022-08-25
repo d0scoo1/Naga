@@ -169,6 +169,20 @@ def lack_event_summary(self):
 
     return summary
 
+
+def function_call(self):
+    all_functions = [f for f in self.contract.functions + self.contract.modifiers if not f.is_shadowed]
+    intercall_count = 0
+    highLevelCall_count = 0
+    for f in all_functions:
+        intercall_count += len(f.internal_calls)
+        highLevelCall_count += len(f.high_level_calls)
+    return {
+        'Intercall_count': intercall_count,
+        'HighLevelCall_count': highLevelCall_count,
+    }
+        
+
 def contract_summary(self):
     summary = {}
     summary.update(base_info(self))
@@ -176,4 +190,5 @@ def contract_summary(self):
     #summary.update(function_summary(self))
     summary.update(modifier_summary(self))
     summary.update(lack_event_summary(self))
+    summary.update(function_call(self))
     return summary

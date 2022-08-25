@@ -25,5 +25,5 @@ class Pause(AbstractDetector):
     def _detect(self):
         detect_paused(self.cexp)
 
-    def summary(self):
+    def output(self):
         return {}

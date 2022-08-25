@@ -22,7 +22,9 @@ class ContractExp():
         self._is_erc1155: Optional[bool] = None
         self.info = dict()
         self.is_analyzed = False
+        self.detectors = []
         self._summary = None
+        #self.call_count = 0 # TODO:统计 call_count 次数
 
     def set_info(self, info):
         '''
@@ -93,6 +95,7 @@ class ContractExp():
             self.exp_svars_dict[svar] = StateVarExp(svar)
         ac = AccessControl(self) # 必须是第一个，它包含初始化和其他 detectors 依赖的信息
         ac.detect()
+        ac.output()
         self.is_analyzed = True
 
     def detect(self,erc_force = None):
@@ -117,7 +120,26 @@ class ContractExp():
         ]
         for detector in self.detectors:
             detector.detect()
+            #detector.output()
+        
+        self._update_exp_svars_dict()
+        
+    def _update_exp_svars_dict(self):
+        for key,svar in self.exp_svars_dict.items():
+            if svar.external: continue
+            svar.rw = self.get_rw_str(key)
 
+        # 处理外部变量，直接继承主宰的 state var 的 owner rw
+        # TODO: 如果它由一个 local var 主宰，则可以修改
+        for key,svar in self.exp_svars_dict.items():
+            if not svar.external: continue
+            for dom in svar.callers:
+                for dom_svar in dom.state_var_callers():
+                    if self.exp_svars_dict[dom_svar].rw[3] == '1':
+                        svar.rw = '0001'
+                        print(svar)
+                        print(self.exp_svars_dict[key])
+                   
 
     def _dividing_functions(self):
         self.functions: List["FunctionExp"] = [] # All entry functions

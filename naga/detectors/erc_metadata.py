@@ -63,16 +63,9 @@ def _detect_getter(self,ERC_METADATA):
             svars = return_fun.return_var_group.state_vars
             if len(svars) == 0: continue
             if len(svars) == 1:
-                # TODO: 依赖外部合约
-                _set_state_vars_label(self,svars,em[0],em[1],DMethod.GETTER)
-                '''
-                try:
-                    _set_state_vars_label(self,svars,em[0],em[1],DMethod.GETTER)
-                except:
-                    print('---',svars[0])
-                    for svar in self.exp_svars_dict:
-                        print(svar.name,svar.type, svar.contract)
-                '''
+                #_set_state_vars_label(self,svars,em[0],em[1],DMethod.GETTER)
+            
+                _set_state_vars_label(self,svars,em[0],em[1],DMethod.GETTER,return_fun.return_var_group.callers)
                 continue
 
             match_name = [svar for svar in svars if svar.name.lower().replace('_','') in em[4]]
@@ -175,8 +168,9 @@ class ERCMetadata(AbstractDetector):
         _detect_inheritance(self.cexp,self.token,self.ERC_METADATA)
         _detect_getter(self.cexp,self.ERC_METADATA)
         _detect_name(self.cexp,self.ERC_METADATA)
+        self.cexp._update_exp_svars_dict()
         _detect_LL(self.cexp)
         _update_svar(self.cexp)
 
-    def summary(self):
+    def output(self):
         return {}

@@ -12,24 +12,32 @@ class Naga():
         self.slither = slither
         self.contract_name = contract_name
         self._entry_contracts = None
+        self._main_contract = None
+
+    @property
+    def main_contract(self):
+        if self._main_contract is not None:
+            return self._main_contract
+        
+        if self.contract_name is not None:
+            contracts =  [ContractExp(c,self) for c in self.slither.get_contract_from_name(self.contract_name)]
+            if len(contracts) == 1:
+                self._main_contract = contracts[0]
+        return self._main_contract
 
     @property
     def entry_contracts(self):
         if self._entry_contracts is not None:
             return self._entry_contracts
 
-        contracts = []
-        if self.contract_name is not None:
-            contracts =  [ContractExp(c,self) for c in self.slither.get_contract_from_name(self.contract_name)]
-        if len(contracts) == 0:
-            contracts_derived = [c for c in self.slither.contracts_derived]
-            contracts_called = [] # (contract,library)
-            for c in contracts_derived:
-                calls = [] # 获取所有的 library calls and  external high level calls
-                for f in c.all_library_calls + c.all_high_level_calls:
-                    calls.append(f[0])
-                contracts_called += calls
-            contracts = [ContractExp(c,self) for c in list(set(contracts_derived) - set(contracts_called))]
+        contracts_derived = [c for c in self.slither.contracts_derived]
+        contracts_called = [] # (contract,library)
+        for c in contracts_derived:
+            calls = [] # 获取所有的 library calls and  external high level calls
+            for f in c.all_library_calls + c.all_high_level_calls:
+                calls.append(f[0])
+            contracts_called += calls
+        contracts = [ContractExp(c,self) for c in list(set(contracts_derived) - set(contracts_called))]
         self._entry_contracts = contracts
         return self._entry_contracts
 

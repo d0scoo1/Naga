@@ -1,4 +1,4 @@
-from .abstract_detector import AbstractDetector
+from .abstract_detector import AbstractDetector,DType,DMethod,VarLabel
 
 def detect_missing_event_functions(self):
     """
@@ -24,5 +24,48 @@ class MissingEvent(AbstractDetector):
     def _detect(self):
         detect_missing_event_functions(self.cexp)
 
-    def summary(self):
-        return {}
+    def output(self):
+        self = self.cexp
+        summary ={
+        'LE_functions': [],
+        'LE_user_svars':{},
+        'LE_owner_svars':{},
+        'LE_rw':{
+            '0000':[],'0001':[], '0010':[],'0011':[], '0100':[],'0101':[], '0110':[],'0111':[],'1000':[],'1001':[], '1010':[],'1011':[], '1100':[],'1101':[], '1110':[],'1111':[],}
+        }
+
+        for f in self.lack_event_functions:
+            summary['LE_functions'].append(f.function.name)
+
+        lack_event_user_erc_svars = dict() # 查找用户是写了什么变量
+        lack_event_owner_erc_svars = dict() # 检查 owner 写了什么变量没有提示
+        
+        for dt in DType:
+            lack_event_user_erc_svars[dt.value] = []
+            lack_event_owner_erc_svars[dt.value] = []
+        lack_event_user_erc_svars['None'] = []
+        lack_event_owner_erc_svars['None'] = []
+        for f in self.lack_event_user_functions:
+            for svar in f.function.all_state_variables_written():
+                exp_svar = self.exp_svars_dict[svar]
+                if exp_svar.dType != None:
+                    lack_event_user_erc_svars[exp_svar.dType.value].append({"function":f.function.full_name, "svar":svar.name})
+                else:
+                    lack_event_user_erc_svars['None'].append({"function":f.function.full_name, "svar":svar.name})
+        for f in self.lack_event_owner_functions:
+            for svar in f.function.all_state_variables_written():
+                exp_svar = self.exp_svars_dict[svar]
+                if exp_svar.dType != None:
+                    lack_event_owner_erc_svars[exp_svar.dType.value].append({"function":f.function.full_name, "svar":svar.name})
+                else:
+                    lack_event_owner_erc_svars['None'].append({"function":f.function.full_name, "svar":svar.name})
+        
+        summary['LE_user_svars'] = lack_event_user_erc_svars
+        summary['LE_owner_svars'] = lack_event_owner_erc_svars
+
+        for f in self.lack_event_functions:
+            for svar in f.function.all_state_variables_written():
+                summary['LE_rw'][self.exp_svars_dict[svar].rw].append({"function":f.function.full_name, "svar":svar.name})
+
+        self.summary.update(summary)
+        return summary

@@ -217,9 +217,10 @@ class AccessControl(AbstractDetector):
         _multistage_owners(self.cexp)
         _set_owner_in_condition_functions(self.cexp)
         _divde_state_vars(self.cexp) # 要在_set_owner_in_condition_functions(self)后执行
-        _update_exp_svars(self.cexp)
+        
+        self.cexp._update_exp_svars_dict()
 
-    def summary(self):
+    def output(self):
         return {}
 
 def _divde_state_vars(self):
@@ -275,6 +276,3 @@ def _divde_state_vars(self):
     self.state_vars_user_only_read_owner_updated = svars_user_only_read_owner_updated
     self.state_vars_user_written_owner_updated = svars_user_written_owner_updated
 
-def _update_exp_svars(self):
-    for svar in self.exp_svars_dict:
-        self.exp_svars_dict[svar].rw = self.get_rw_str(svar)
