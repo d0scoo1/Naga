@@ -56,19 +56,19 @@ class NagaTest():
     @func_set_timeout(time_out_seconds)
     def _naga_test(self,slither):
         n_start_time = time.time()
-
         naga = Naga(slither,contract_name= self.contract['name'])
         entry_c = naga.entry_contract
-
         if entry_c == None:
             self._write_error('naga_NoEntryContract')
             return
-        
+
+        # 设置合约为强制 ERC 模式
+        entry_c.erc_force = self.contract['erc_force']
         if not entry_c.is_erc:
             self._write_error('naga_IsNotERC')
             return
 
-        naga.detect_entry_contract(erc_force=self.contract['erc_force'])
+        naga.detect_entry_contract()
         n_end_time = time.time()
         self.contract['naga_test_cost'] = n_end_time - n_start_time
 
@@ -122,11 +122,12 @@ def _load_contracts(input_dir,output_dir,erc_force = None):
         while line != '':
             contracts_info.append(json.loads(line))
             line = fr.readline()
-
+    proxy_contracts = []
     staled_contracts = []
     contracts = []
     for c in contracts_info:
         if c['Proxy'] == '1':
+            proxy_contracts.append(c)
             continue
         if int(c['compiler'][2]) <= 4:
             staled_contracts.append(c)
@@ -148,6 +149,7 @@ def _load_contracts(input_dir,output_dir,erc_force = None):
         contracts.append(contractInfo)
     
     print('contracts_info:',len(contracts_info))
+    print('proxy_contracts:',len(proxy_contracts))
     print('staled_contracts:',len(staled_contracts))
 
     return contracts

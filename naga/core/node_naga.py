@@ -17,10 +17,14 @@ NO_LVALUE_OPERATIONS = (Condition,Return,EventCall,Transfer)
 class Caller():
     def __init__(self, call_ir, dep_vars:List):
         self.call_ir = call_ir
-        self.dest_function = call_ir.function
-        self.dest_contract = call_ir.function.contract
+        self.dest_function = None
+        self.dest_contract = None
         self.dep_vars = dep_vars
         self.dep_vars_groups:VariableGroup = VariableGroup(dep_irs_ssa = dep_vars)
+
+        if call_ir.function is not None:
+            self.dest_function = call_ir.function
+            self.dest_contract = call_ir.function.contract
     
     def local_var_callers(self):
         '''
@@ -70,13 +74,14 @@ def node_tracker(node:Node, tainted_vars = []):
 ##### Data-dependency Analysis Engine #####
 
 def dep_tracker(tainted_vars = [], dom_irs = [], walked_functions = set(), is_call = False, callers = {}):
+
     '''
     callers 是一个 dict, key 是 变量名称， value 是一个 variableGroup，记录了调用者的依赖信息
     这里 caller 有两种情况：1.依赖一个 local variable, 这种情况，我们认为是可变的。2. 依赖一个 state variable, 这时，caller 是否可变由这个 svar 的读写来决定
     '''
     #for ir in dom_irs: print('ir :{}'.format(ir))
     
-    if len(dom_irs) == 0: return []
+    if len(dom_irs) == 0: return [],{}
 
     if tainted_vars == []:
         t_ir = dom_irs.pop()
@@ -102,6 +107,8 @@ def dep_tracker(tainted_vars = [], dom_irs = [], walked_functions = set(), is_ca
             dep_vars += call_track(ir,dom_irs.copy(),walked_functions,callers)
         else:
             dep_vars += ir.read # 必须写在 walked_function检查前，防止自调用
+    
+    #print('dep_vars: {}'.format('.'.join(str(i) for i in dep_vars)))
     return dep_vars, callers
 
 def highLevelCall_dom_tracker(call_ir:HighLevelCall,r_dom_irs, walked_functions,callers):

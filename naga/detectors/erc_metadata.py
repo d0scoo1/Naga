@@ -86,7 +86,7 @@ def _detect_LL(self):
     2. 是否被 require(totalsupply < uint) 限制
     '''
     for svar in self.get_svars_by_label(VarLabel._totalSupply):
-        if self.exp_svars_dict[svar].rw[3] != '1': continue
+        if self.svarn_pool[svar].rw[3] != 1: continue
         # owner 保护的 totalSupply 写函数
         written_functions = self.state_var_written_functions_dict[svar] # totalSupply = totalSupply + amount
         read_functions = self.state_var_read_functions_dict[svar] # totalSupply.add(amount)
