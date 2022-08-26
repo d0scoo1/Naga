@@ -195,10 +195,10 @@ class ContractN():
             self.svarn_pool[svar].dMethods[d_method] = True
 
     def get_svars_by_label(self, v_lable: VarLabel = None):
-        return [svar for svar in self.svarn_pool if self.svarn_pool[svar].label == v_lable]
+        return [svar for svar in self.svarn_pool if self.svarn_pool[svar].label == v_lable and not self.svarn_pool[svar].external]
 
     def get_svars_by_dtype(self, d_type:DType = None):
-        return [svar for svar in self.svarn_pool if self.svarn_pool[svar].dType == d_type]
+        return [svar for svar in self.svarn_pool if self.svarn_pool[svar].dType == d_type and not self.svarn_pool[svar].external]
 
     def update_external_svarn_rw(self,svarn):
         """

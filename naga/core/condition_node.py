@@ -81,7 +81,7 @@ class ConditionNode(NodeN):
 
     def _print(self):
         return {
-            "expression": str(self.node.expression),
+            #"expression": str(self.node.expression),
             "condition_type": str(self.condType),
             "msg": str(self.msg),
             "state_vars":list(set([str(s) for s in self.dep_vars_groups.state_vars])),

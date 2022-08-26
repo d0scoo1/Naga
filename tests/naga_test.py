@@ -172,6 +172,7 @@ def _count_errors(output_dir):
                 naga_timeout.append(c[:42])
             else:
                 naga_errors.append(c[:42])
+                print(c)
         else: 
             if c[43:].endswith('timeout'):
                 slither_timeout.append(c[:42])
