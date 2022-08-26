@@ -16,11 +16,13 @@ from slither.slithir.variables import (
 from slither.core.variables.state_variable import StateVariable
 from slither.core.variables.local_variable import LocalVariable
 
-class VariableGroup:
+
+class VariableGroup():
     '''
     一个 node 可能依赖一组变量，我们使用这个类来管理这些变量
     '''
     def __init__(self, all_vars = None,dep_irs_ssa = None, callers = {}):
+        super().__init__()
         self.all_vars = all_vars
         self.dep_irs_ssa = dep_irs_ssa
         self.state_vars:List[StateVariable] = []
@@ -28,7 +30,7 @@ class VariableGroup:
         self.solidity_vars = []
         self.constant_vars = []
         self.other_vars = []
-        self.callers = callers
+        self.callers = callers # 依赖的变量可能是由 High Level 函数产生的，这里保存调用者信息
         self.__divide_vars()
 
     def __divide_vars(self):
@@ -97,3 +99,5 @@ def var_group_combine(varGroups):
 def list2str(l):
     l = [str(i) for i in l]
     return ','.join(l)
+
+    

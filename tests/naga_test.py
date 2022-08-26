@@ -43,7 +43,7 @@ class NagaTest():
             return
 
         try:
-            naga_contract = self._naga_test(slither)
+            naga = self._naga_test(slither)
         except FunctionTimedOut:
             self._write_error('naga_Timeout')
             return
@@ -51,33 +51,35 @@ class NagaTest():
             self._write_error('naga_Error')
             return
 
-        return naga_contract
+        return naga
 
     @func_set_timeout(time_out_seconds)
     def _naga_test(self,slither):
         n_start_time = time.time()
+
         naga = Naga(slither,contract_name= self.contract['name'])
-        
-        if naga.main_contract == None:
+        entry_c = naga.entry_contract
+
+        if entry_c == None:
             self._write_error('naga_NoEntryContract')
             return
-
-        naga_contract = naga.main_contract
-        if self.contract['erc_force'] != None:
-            naga_contract.detect(erc_force= self.contract['erc_force'])
-        elif naga_contract.is_erc:
-            naga_contract.detect()
-        else:
+        
+        if not entry_c.is_erc:
             self._write_error('naga_IsNotERC')
             return
+
+        naga.detect_entry_contract(erc_force=self.contract['erc_force'])
         n_end_time = time.time()
         self.contract['naga_test_cost'] = n_end_time - n_start_time
-        self.contract['entry_sol_file'] = naga_contract.contract.source_mapping['filename_used'][len(self.contracts_dir)+1:]
 
-        naga_contract.set_info(self.contract)
-        naga_contract.summary_json(os.path.join(self.result_path,self.contract['address']))
-        
-        return naga_contract
+        self.contract['entry_sol_file'] = entry_c.contract.source_mapping['filename_used'][len(self.contracts_dir)+1:]
+        # output
+
+        self.contract.update(entry_c.summary)
+        entry_c.summary = self.contract
+        entry_c.output(os.path.join(self.result_path,self.contract['address']))
+        return naga
+
 
 
     def _write_error(self,error_msg):

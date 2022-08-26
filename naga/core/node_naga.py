@@ -13,15 +13,6 @@ from slither.slithir.variables import (
     TupleVariable,
 )
 NO_LVALUE_OPERATIONS = (Condition,Return,EventCall,Transfer)
-class NodeExp():
-    def __init__(self, node:Node, tainted_vars = []):
-        self.node = node
-        self.tainted_vars = tainted_vars
-        self.dep_vars_groups:List[VariableGroup] = node_tracker(self.node,self.tainted_vars)
-
-    def __str__(self):
-        return "NodeExp: node:{} vars_group:[{}]".format(self.node,self.read_vars_groups)
-
 
 class Caller():
     def __init__(self, call_ir, dep_vars:List):
@@ -30,7 +21,7 @@ class Caller():
         self.dest_contract = call_ir.function.contract
         self.dep_vars = dep_vars
         self.dep_vars_groups:VariableGroup = VariableGroup(dep_irs_ssa = dep_vars)
-
+    
     def local_var_callers(self):
         '''
         return the local variables that are used in the caller
@@ -50,6 +41,16 @@ class Caller():
             return vars
         else:
             return [var for var in self.dep_vars_groups.state_vars if str(var.type).startswith("bytes")]
+
+class NodeN():
+    def __init__(self, node:Node, tainted_vars = [],):
+        self.node = node
+        self.tainted_vars = tainted_vars
+        self.dep_vars_groups:VariableGroup = node_tracker(self.node,self.tainted_vars)
+
+    def __str__(self):
+        return "NodeExp: node:{} vars_group:[{}]".format(self.node,self.read_vars_groups)
+
 
 def node_tracker(node:Node, tainted_vars = []):
 
@@ -173,7 +174,3 @@ def _add_dom_caller(vars,dom_caller,callers):
             if var not in callers:
                 callers[var._non_ssa_version] = []
             callers[var._non_ssa_version].append(dom_caller)
-    
-def list2str(l):
-    l = [str(i) for i in l]
-    return ','.join(l)

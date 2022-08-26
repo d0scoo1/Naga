@@ -1,4 +1,4 @@
-from .abstract_detector import AbstractDetector,DType,DMethod,VarLabel
+from .abstract_detector import *
 
 def detect_missing_event_functions(self):
     """
@@ -22,10 +22,10 @@ def detect_missing_event_functions(self):
 
 class MissingEvent(AbstractDetector):
     def _detect(self):
-        detect_missing_event_functions(self.cexp)
+        detect_missing_event_functions(self.cn)
 
-    def output(self):
-        self = self.cexp
+    def summary(self):
+        self = self.cn
         summary ={
         'LE_functions': [],
         'LE_user_svars':{},
@@ -47,14 +47,14 @@ class MissingEvent(AbstractDetector):
         lack_event_owner_erc_svars['None'] = []
         for f in self.lack_event_user_functions:
             for svar in f.function.all_state_variables_written():
-                exp_svar = self.exp_svars_dict[svar]
+                exp_svar = self.svarn_pool[svar]
                 if exp_svar.dType != None:
                     lack_event_user_erc_svars[exp_svar.dType.value].append({"function":f.function.full_name, "svar":svar.name})
                 else:
                     lack_event_user_erc_svars['None'].append({"function":f.function.full_name, "svar":svar.name})
         for f in self.lack_event_owner_functions:
             for svar in f.function.all_state_variables_written():
-                exp_svar = self.exp_svars_dict[svar]
+                exp_svar = self.svarn_pool[svar]
                 if exp_svar.dType != None:
                     lack_event_owner_erc_svars[exp_svar.dType.value].append({"function":f.function.full_name, "svar":svar.name})
                 else:
@@ -65,7 +65,6 @@ class MissingEvent(AbstractDetector):
 
         for f in self.lack_event_functions:
             for svar in f.function.all_state_variables_written():
-                summary['LE_rw'][self.exp_svars_dict[svar].rw].append({"function":f.function.full_name, "svar":svar.name})
+                summary['LE_rw'][self.svarn_pool[svar].rw_str].append({"function":f.function.full_name, "svar":svar.name})
 
-        self.summary.update(summary)
-        return summary
+        return {'ME':summary}

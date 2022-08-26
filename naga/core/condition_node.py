@@ -6,7 +6,6 @@ from slither.core.declarations import SolidityVariableComposed
 from slither.core.variables.variable import Variable
 from typing import List
 
-
 def _get_condition_depVars(node:Node,msg:str) -> List:
     '''
     The condition statement could have more than one condition, connected by AND &&, which is equal to multiple requires.
@@ -46,15 +45,15 @@ def get_if(node:Node) -> List:
     msg = 'if_statement'
     return _get_condition_depVars(node,msg)
 
-from .node_exp import NodeExp
+from .node_naga import NodeN
 
-class ConditionNode(NodeExp):
+class ConditionNode(NodeN):
     def __init__(self, node:Node, condition_read:Variable, msg:str):
-        self.node:Node = node
         self.condType:NodeType = node.type # 使用 node 的 type 作为 condType
         self.condition_read:List = condition_read # 每个 require 我们只关心一个 condition
         self.msg:str = msg # require 还包含一个 message
         super().__init__(node,tainted_vars = self.condition_read)
+
         self.owner_candidates = self._get_owner_candidates()
     
     def exist_oror(self):

@@ -1,11 +1,21 @@
-from .abstract_detector import AbstractDetector
-from .abstract_detector import (_set_state_vars_label,_get_no_label_svars,_get_label_svars,_get_dtype_svars)
+from .abstract_detector import *
 from slither.core.solidity_types.elementary_type import ElementaryType
 from slither.core.solidity_types.mapping_type import MappingType
-'''
-Detect owner, blackList, whiteList, paused
-'''
-from .abstract_detector import (VarLabel,DType,DMethod)
+
+class AccessControl(AbstractDetector):
+    def _detect(self):
+        _detect_owners(self.cn)
+        _detect_blacklist(self.cn)
+        _multistage_owners(self.cn)
+        _set_owner_in_condition_functions(self.cn)
+        _divde_state_vars(self.cn)
+
+    def summary(self):
+        return{
+            'AC':{}
+        }
+
+
 openzeppelin_contracts = [
     #'Label', 'Contract Name', 'StateVar Type', 'State Variable', 
     (VarLabel.role, DType.ACCESS_CONTROL,'AccessControl','mapping(bytes32 => RoleData)','_roles'),
@@ -36,7 +46,8 @@ openzeppelin_contracts = [
     #('whitelist','WhitelistedRole','Roles.Role','_whitelisteds'),
 ]
 
-def _detect_inheritance(self):
+
+def __detect_inheritance(self):
     '''
     检测是否继承了 openzeppelin 中的 contract
     '''
@@ -53,7 +64,7 @@ def _detect_inheritance(self):
         for svar in self.all_state_vars:
             if str(svar.type) == oz[3]:
                 if svar.name == oz[4]:
-                    _set_state_vars_label(self,[svar],oz[0],oz[1],DMethod.INHERITANCE)
+                    self.update_svarn_label(svar,oz[0],oz[1],DMethod.INHERITANCE)
                     break
 
 openzeppelin_modifiers = [
@@ -71,7 +82,7 @@ def _startswith(ss,prefixs):
     return False
 '''
 
-def _detect_modifiers(self):
+def __detect_modifiers(self):
     '''
     modifier 可以找出定义的 owner, 但是这个 owner 有可能并没有被使用（例如mainnet/0x992a8a9f4bde0fb2ee1f5bbb3cb7b1e64748e13d）
     '''
@@ -84,12 +95,12 @@ def _detect_modifiers(self):
             if str(m.name).lower().replace('_','') == om[2]:
                 svars = m.all_state_variables_read()
                 if len(svars) == 1:
-                    _set_state_vars_label(self,svars,om[0],om[1],DMethod.MODIFIER)
+                    self.update_svarn_label(svars[0],om[0],om[1],DMethod.MODIFIER)
                     self.modifier_dict[om[1]].append(m)
                 else:
                     for svar in svars:
                         if str(svar.type) in om[3]:
-                            _set_state_vars_label(self,[svar],om[0],om[1],DMethod.MODIFIER)
+                            self.update_svarn_label(svar,om[0],om[1],DMethod.MODIFIER)
                             self.modifier_dict[om[1]].append(m)
                 break
 
@@ -137,7 +148,7 @@ def _detect_blacklist(self):
         require(!_blacklist[sender] && !_blacklist[recipient], "Blacklisted!");
     因此我们检查所有的 mapping(address => bool) 类型变量，如果它的写依赖于 owner(不能是自己)，且出现在 token_written_functions 的 require 中 则认为是 bwList
     '''
-    owners = _get_dtype_svars(self,DType.ACCESS_CONTROL)
+    owners = self.get_svars_by_dtype(DType.ACCESS_CONTROL)
     blacklist_candidates = [svar for svar in self.all_state_vars if isinstance(svar.type, MappingType) and svar.type.type_from == ElementaryType('address') and svar.type.type_to == ElementaryType('bool')]
 
     twf_conditions = [cond for f in self.token_written_functions for cond in f.conditions]
@@ -148,9 +159,10 @@ def _detect_blacklist(self):
             svar in cond.dep_vars_groups.state_vars
             for cond in twf_conditions
         ): # 如果出现在 token_written_functions 中，注意，这里并没有校验 msg.sender # SolidityVariableComposed('msg.sender') in cond.dep_vars_groups.solidity_vars 
-            _set_state_vars_label(self,[svar],VarLabel.blacklist,DType.LIMITED_LIQUIDITY,DMethod.DEPENDENCY)
+            self.update_svarn_label(svar,VarLabel.blacklist,DType.LIMITED_LIQUIDITY,DMethod.DEPENDENCY)
 
 def _set_owner_in_condition_functions(self):
+
     owner_in_condition_functions = []
     access_modifiers = self.modifier_dict[DType.ACCESS_CONTROL]
 
@@ -158,22 +170,22 @@ def _set_owner_in_condition_functions(self):
         if set(f.function.modifiers) & set(access_modifiers) != set():
             owner_in_condition_functions.append(f)
 
-    for svar in set(_get_dtype_svars(self,DType.ACCESS_CONTROL)):
+    for svar in self.get_svars_by_dtype(DType.ACCESS_CONTROL):
         owner_in_condition_functions += self.state_var_read_in_condition_functions_dict[svar]
     self.owner_in_condition_functions = list(set(owner_in_condition_functions))
 
 def _multistage_owners(self):
-    multistage_owners = _get_label_svars(self,VarLabel.role)
-    for owner in _get_label_svars(self,VarLabel.owner):
+    multistage_owners = self.get_svars_by_label(VarLabel.role)
+    for owner in self.get_svars_by_label(VarLabel.owner):
         if _is_owner(owner,[owner],self.state_var_written_functions_dict[owner]): # 如果更新 owner 只依赖自己，则不是 multistage owner
             continue
         multistage_owners.append(owner)
     self.multistage_owners = multistage_owners
 
-def detect_owners(self):
+def _detect_owners(self):
     # 先搜索继承 和 modifier 中的 owner
-    _detect_inheritance(self)
-    _detect_modifiers(self)
+    __detect_inheritance(self)
+    __detect_modifiers(self)
 
     """
     1. owner 需要是 state variable
@@ -191,12 +203,12 @@ def detect_owners(self):
     owner_candidates = [svar for f in self.functions for svar in f.owner_candidates]
     #for c in all_candidates: print(c)
     # 去掉 inheritance 和 modifier 中检测到的 owner
-    owner_candidates = list(set(_get_no_label_svars(self)) & set(owner_candidates)) 
+    owner_candidates = list(set(self.get_svars_by_label()) & set(owner_candidates)) 
     #for v in owner_candidates: print('[*] Detecting owner of {}'.format(v.name))
     '''
      查找 owner, 如果 candidate 的写函数不是 constructor，则需要存在一个require，其中读取了 变量自己 或 另一个 owner ，并且读取了 msg.sender
     '''
-    owners = _get_dtype_svars(self,DType.ACCESS_CONTROL)
+    owners = self.get_svars_by_dtype(DType.ACCESS_CONTROL)
     max_deep = (len(owner_candidates) + 1) * len(owner_candidates) / 2 + 1 # 最差情况下，每个owner 都互相依赖，且我们每次只能检出一个 owner
     now_deep = 0
     while len(owner_candidates) > 0 and now_deep <= max_deep:
@@ -204,24 +216,9 @@ def detect_owners(self):
         svar = owner_candidates.pop(0)
         #print('[{}] Detecting owner of {}'.format(now_deep,svar.name))
         if _is_owner(svar,owners,self.state_var_written_functions_dict[svar]):
-            _set_state_vars_label(self,[svar],VarLabel.owner,DType.ACCESS_CONTROL,DMethod.DEPENDENCY)
+            self.update_svarn_label(svar,VarLabel.owner,DType.ACCESS_CONTROL,DMethod.DEPENDENCY)
             owners.append(svar)
         owner_candidates.append(svar)
-
-
-class AccessControl(AbstractDetector):
-
-    def _detect(self):
-        detect_owners(self.cexp)
-        _detect_blacklist(self.cexp)
-        _multistage_owners(self.cexp)
-        _set_owner_in_condition_functions(self.cexp)
-        _divde_state_vars(self.cexp) # 要在_set_owner_in_condition_functions(self)后执行
-        
-        self.cexp._update_exp_svars_dict()
-
-    def output(self):
-        return {}
 
 def _divde_state_vars(self):
     '''
@@ -275,4 +272,3 @@ def _divde_state_vars(self):
     self.state_vars_user_only_read = svars_user_only_read
     self.state_vars_user_only_read_owner_updated = svars_user_only_read_owner_updated
     self.state_vars_user_written_owner_updated = svars_user_written_owner_updated
-

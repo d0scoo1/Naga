@@ -17,11 +17,11 @@ from slither.core.variables.variable import Variable
 from slither.core.variables.state_variable import StateVariable
 from slither.slithir.operations.event_call import EventCall
 
-from .condition_exp import (get_require, get_if, ConditionNode)
-from .node_exp import NodeExp
+from .condition_node import (get_require, get_if, ConditionNode)
+from .node_naga import NodeN
 from .variable_group import (VariableGroup, var_group_combine)
 
-class FunctionExp():
+class FunctionN():
     def __init__(self, function: FunctionContract):
         #self.__dict__.update(function.__dict__)
         self.function:"FunctionContract" = function
@@ -132,12 +132,12 @@ class FunctionExp():
         return self._events
 
     @property
-    def return_nodes(self) -> List[NodeExp]:
+    def return_nodes(self) -> List[NodeN]:
         if self._return_nodes is not None: return self._return_nodes
         self._return_nodes = []
         for node in self.function.nodes:
             if node.type == NodeType.RETURN:
-                exp_node = NodeExp(node)
+                exp_node = NodeN(node)
                 self._return_nodes.append(exp_node)
         return self._return_nodes
 
