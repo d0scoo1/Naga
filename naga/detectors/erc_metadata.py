@@ -30,6 +30,8 @@ ERC1155_STATE_VARIAVLES = [
     (VarLabel._totalSupply,DType.DEFAULT,'totalSupply()', 'mapping(uint256 => uint256)', ['totalsupply','supply'])
 ]
 
+
+
 '''
 exclude_stateVaribles = [
     # type,name
@@ -46,7 +48,7 @@ def _detect_inheritance(self,token,ERC_METADATA):
     if not any(
         c
         for c in self.contract.inheritance
-        if c.name == token
+        if c.name == token or c.name == token + 'Upgradeable'
     ):
         return
     for em in ERC_METADATA:
