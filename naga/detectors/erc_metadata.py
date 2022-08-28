@@ -96,33 +96,30 @@ def _detect_LL(self):
         for f in written_functions:
             for n in f.function.nodes:
                 if '+' in str(n.expression) and not 'require' in str(n.expression):
-                    if not _totalSupply_limited(f.all_condition_nodes,svar):
+                    if not _totalSupply_limited(self,f.all_condition_nodes,svar):
                         self.update_svarn_label(svar,VarLabel._totalSupply,DType.MUTABLE_METADATA,DMethod.DEPENDENCY)
                         break
         
         for f in read_functions:
             for n in f.function.nodes:
                 if '.add' in str(n.expression) and not 'require' in str(n.expression):
-                    if _safeMath_add(n.irs_ssa,svar) and not _totalSupply_limited(f.all_condition_nodes,svar):
+                    if _safeMath_add(n.irs_ssa,svar) and not _totalSupply_limited(self,f.all_condition_nodes,svar):
                         self.update_svarn_label(svar,VarLabel._totalSupply,DType.MUTABLE_METADATA,DMethod.DEPENDENCY)
                         break
 
-def _totalSupply_limited(condition_nodes, total_supply):
+def _totalSupply_limited(self,condition_nodes, total_supply):
     '''
-    只要totalSupply 出现在 require 中，就认为是被限制的
+    只要totalSupply 出现在 require 中，并且require 中 其他的 uint 变量是不可写的
     '''
     for n in condition_nodes:
         if total_supply in n.state_variables_read:
+            for svar in n.state_variables_read:
+                if svar == total_supply: continue
+                if str(svar.type).startswith('uint') and self.state_var_written_functions_dict[svar] != []:
+                    return False
             return True
     return False
-    '''
-    for n in condition_nodes:
-        if total_supply in n.state_variables_read and ('<' or '>' or '==' in str(n.expression)):
-            uint_svars = [svar for svar in n.state_variables_read if str(svar.type).startswith('uint')]
-            if len(uint_svars) >= 2:
-                return True
-    return False
-    '''
+
 
 def _safeMath_add(irs,total_supply):
     for ir in irs:
