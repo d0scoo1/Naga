@@ -26,13 +26,30 @@ class NagaCore():
         cs = self.slither.get_contract_from_name(self.contract_name)
         if len(cs) == 1:
             entry_contract = ContractN(cs[0],self)
+        elif len(self.entry_contracts) == 1:
+            entry_contract = ContractN(self.entry_contracts[0],self)
 
         self._entry_contract = entry_contract
         return self._entry_contract
+    @property
+    def entry_contracts(self):
+        contracts_derived  = self.slither.contracts_derived 
+        called_contracts = []
+        for c in contracts_derived:
+            called_contracts += [d[0] for d in c.all_high_level_calls + c.all_library_calls]
+
+        return list(set(contracts_derived)-set(called_contracts))
+    
+    def detect_all_entry_contracts(self,erc_force = None):
+        for c in self.entry_contracts:
+            if erc_force is not None:
+                c.is_erc = erc_force
+            self._detect(c)
 
 
-
-    def detect_entry_contract(self):
+    def detect_entry_contract(self,erc_force = None):
+        if erc_force is not None:
+            self.entry_contract.is_erc = erc_force
         self._detect(self.entry_contract)
 
     def _detect(self,contractN:ContractN):
