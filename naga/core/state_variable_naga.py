@@ -40,7 +40,7 @@ class DType(Enum): # detection type
     METADATA = 'metadata'
     PARAMETERS = 'parameters'
     ASSET = 'asset'
-    DEFAULT = 'default'
+    TOTALSUPPLY = 'totalSupply'
 
     def __str__(self):
         return self.value

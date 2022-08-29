@@ -12,3 +12,4 @@ tests/module_test.py
 tests/detection_test.py
 old.naga/*
 old.analysis/*
+analyzer/*

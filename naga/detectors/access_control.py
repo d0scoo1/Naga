@@ -156,7 +156,7 @@ def _detect_blacklist(self):
 
     twf_conditions = [cond for f in self.token_written_functions for cond in f.conditions]
     for svar in blacklist_candidates:
-        if not _is_written_by_other_owner(svar,owners,self.state_var_written_functions_dict[svar]):
+        if not _is_written_by_other_owner(svar,owners,self.svar_written_functions(svar)):
             continue
         if any(
             svar in cond.dep_vars_groups.state_vars
@@ -180,7 +180,7 @@ def _set_owner_in_condition_functions(self):
 def _multistage_owners(self):
     multistage_owners = self.get_svars_by_label(VarLabel.role)
     for owner in self.get_svars_by_label(VarLabel.owner):
-        if _is_owner(owner,[owner],self.state_var_written_functions_dict[owner]): # 如果更新 owner 只依赖自己，则不是 multistage owner
+        if _is_owner(owner,[owner],self.svar_written_functions(owner)): # 如果更新 owner 只依赖自己，则不是 multistage owner
             continue
         multistage_owners.append(owner)
     self.multistage_owners = multistage_owners
@@ -218,7 +218,7 @@ def _detect_owners(self):
         now_deep += 1
         svar = owner_candidates.pop(0)
         #print('[{}] Detecting owner of {}'.format(now_deep,svar.name))
-        if _is_owner(svar,owners,self.state_var_written_functions_dict[svar]):
+        if _is_owner(svar,owners,self.svar_written_functions(svar)):
             self.update_svarn_label(svar,VarLabel.owner,DType.ACCESS_CONTROL,DMethod.DEPENDENCY)
             owners.append(svar)
         owner_candidates.append(svar)

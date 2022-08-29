@@ -224,6 +224,17 @@ class ContractN():
             for dom_svar in dom.state_var_callers():
                 if self.svarn_pool[dom_svar].rw[3] == 1:
                     svarn.rw[3] = 1
+    
+    def svar_written_functions(self,svar):
+        '''
+        state_var_written_functions_dict 中包括了 初始化函数，这里需要去掉
+        '''
+        return [
+            f 
+            for f in self.state_var_written_functions_dict[svar]
+            if not f.is_constructor_or_initializer
+        ]
+
 
     from naga.utils import collect_summary
     def output(self,output_file=None):

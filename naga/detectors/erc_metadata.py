@@ -8,7 +8,7 @@ ERC20_STATE_VARIAVLES = [
     (VarLabel._name,DType.METADATA,'name()', 'string', ['name']),
     (VarLabel._symbol,DType.METADATA,'symbol()', 'string', ['symbol']),
     (VarLabel._decimals,DType.METADATA,'decimals()', 'uint', ['decimals','decimal']),
-    (VarLabel._totalSupply,DType.DEFAULT,'totalSupply()', 'uint', ['totalsupply','supply']),
+    (VarLabel._totalSupply,DType.TOTALSUPPLY,'totalSupply()', 'uint', ['totalsupply','supply']),
     (VarLabel._balances,DType.ASSET,'balanceOf(address)', 'mapping(address => uint256)', ['balances','balance']),
     (VarLabel._allowances,DType.ASSET,'allowance(address,address)','mapping(address => mapping(address => uint256))',['allowances','allowance']),
 ]
@@ -27,7 +27,7 @@ ERC1155_STATE_VARIAVLES = [
     (VarLabel._balances,DType.ASSET,'balanceOf(address, uint256)','mapping(uint256 => mapping(address => uint256))',['balances','balance']),
     (VarLabel._operatorApprovals,DType.ASSET,'isApprovedForAll(address, address)','mapping(address => mapping(address => bool))',['_operatorapprovals','operatorapproval']),
     (VarLabel._uri,DType.METADATA,'uri(uint256)','string',['uri']),
-    (VarLabel._totalSupply,DType.DEFAULT,'totalSupply()', 'mapping(uint256 => uint256)', ['totalsupply','supply'])
+    (VarLabel._totalSupply,DType.TOTALSUPPLY,'totalSupply()', 'mapping(uint256 => uint256)', ['totalsupply','supply'])
 ]
 
 
@@ -82,7 +82,7 @@ def _detect_getter(self,ERC_METADATA):
 
 
 from slither.slithir.operations import LibraryCall
-def _detect_LL(self):
+def _detect_VS(self):
     '''
     1. totalSupply 是否为加法运算： + 或 maths.add() 运算
     2. 是否被 require(totalsupply < uint) 限制
@@ -90,34 +90,36 @@ def _detect_LL(self):
     for svar in self.get_svars_by_label(VarLabel._totalSupply):
         if self.svarn_pool[svar].rw[3] != 1: continue
         # owner 保护的 totalSupply 写函数
-        written_functions = self.state_var_written_functions_dict[svar] # totalSupply = totalSupply + amount
+        written_functions = self.svar_written_functions(svar) # totalSupply = totalSupply + amount
         read_functions = self.state_var_read_functions_dict[svar] # totalSupply.add(amount)
-        is_totalSupply_add = False
+
         for f in written_functions:
             for n in f.function.nodes:
                 if '+' in str(n.expression) and not 'require' in str(n.expression):
-                    if not _totalSupply_limited(self,f.all_condition_nodes,svar):
-                        self.update_svarn_label(svar,VarLabel._totalSupply,DType.MUTABLE_METADATA,DMethod.DEPENDENCY)
+                    if _totalSupply_not_limited(self,f.all_condition_nodes,svar):
+                        self.update_svarn_label(svar,VarLabel._totalSupply,DType.VULNERABLE_SCARCITY,DMethod.DEPENDENCY)
                         break
         
         for f in read_functions:
             for n in f.function.nodes:
                 if '.add' in str(n.expression) and not 'require' in str(n.expression):
-                    if _safeMath_add(n.irs_ssa,svar) and not _totalSupply_limited(self,f.all_condition_nodes,svar):
-                        self.update_svarn_label(svar,VarLabel._totalSupply,DType.MUTABLE_METADATA,DMethod.DEPENDENCY)
+                    if _safeMath_add(n.irs_ssa,svar) and _totalSupply_not_limited(self,f.all_condition_nodes,svar):
+                        self.update_svarn_label(svar,VarLabel._totalSupply,DType.VULNERABLE_SCARCITY,DMethod.DEPENDENCY)
                         break
 
-def _totalSupply_limited(self,condition_nodes, total_supply):
+def _totalSupply_not_limited(self,condition_nodes, total_supply):
     '''
     只要totalSupply 出现在 require 中，并且require 中 其他的 uint 变量是不可写的
     '''
     for n in condition_nodes:
         if total_supply in n.state_variables_read:
             for svar in n.state_variables_read:
+                
                 if svar == total_supply: continue
-                if str(svar.type).startswith('uint') and self.state_var_written_functions_dict[svar] != []:
-                    return False
-            return True
+                
+                if str(svar.type).startswith('uint') and self.svar_written_functions(svar) != []:
+                    return True
+            return False
     return False
 
 
@@ -163,7 +165,7 @@ class ERCMetadata(AbstractDetector):
         _detect_inheritance(self.cn,self.token,self.ERC_METADATA)
         _detect_getter(self.cn,self.ERC_METADATA)
         _detect_name(self.cn,self.ERC_METADATA)
-        _detect_LL(self.cn)
+        _detect_VS(self.cn)
         _update_svar(self.cn)
 
     def summary(self):
