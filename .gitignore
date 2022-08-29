@@ -11,3 +11,4 @@ tests/slither_test.py
 tests/module_test.py
 tests/detection_test.py
 old.naga/*
+old.analysis/*

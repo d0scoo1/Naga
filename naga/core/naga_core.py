@@ -36,9 +36,10 @@ class NagaCore():
     def _detect(self,contractN:ContractN):
         if not contractN.is_analyzed:
             contractN.analyze()
-        for D in self.detectors:
-            d = D(self, contractN)
-            d.detect()
-            contractN.detectors.append(d)
+        if contractN.is_erc:
+            for D in self.detectors:
+                d = D(self, contractN)
+                d.detect()
+                contractN.detectors.append(d)
 
 

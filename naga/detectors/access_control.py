@@ -11,8 +11,11 @@ class AccessControl(AbstractDetector):
         _divde_state_vars(self.cn)
 
     def summary(self):
+
         return{
-            'AC':{}
+            'AC':{
+                
+            }
         }
 
 

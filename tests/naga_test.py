@@ -64,9 +64,9 @@ class NagaTest():
 
         # 设置合约为强制 ERC 模式
         entry_c.erc_force = self.contract['erc_force']
-        if not entry_c.is_erc:
-            self._write_error('naga_IsNotERC')
-            return
+        self.contract['erc'] = entry_c.erc
+
+        #TODO: 对于非 ERC 合约只检测 AC 和 ME
 
         naga.detect_entry_contract()
         n_end_time = time.time()
@@ -156,7 +156,7 @@ def _load_contracts(input_dir,output_dir,erc_force = None):
 
 def _count_errors(output_dir):
     naga_errors = []
-    naga_not_erc = []
+    #naga_not_erc = []
     naga_no_entry = []
     naga_timeout = []
     
@@ -164,9 +164,9 @@ def _count_errors(output_dir):
     slither_compileError = []
     for c in os.listdir(os.path.join(output_dir,'errors')):
         if c[43:].startswith('naga'): 
-            if c[43:].endswith('IsNotERC'):
-                naga_not_erc.append(c[:42])
-            elif c[43:].endswith('NoEntryContract'):
+            #if c[43:].endswith('IsNotERC'):
+            #    naga_not_erc.append(c[:42])
+            if c[43:].endswith('NoEntryContract'):
                 naga_no_entry.append(c[:42])
             elif c[43:].endswith('Timeout'):
                 naga_timeout.append(c[:42])
@@ -180,13 +180,13 @@ def _count_errors(output_dir):
                 slither_compileError.append(c[:42])
 
     print('naga_errors:',len(naga_errors))
-    print('naga_not_erc:',len(naga_not_erc))
+    #print('naga_not_erc:',len(naga_not_erc))
     print('naga_no_entry:',len(naga_no_entry))
     print('naga_timeout:',len(naga_timeout))
     print('slither_timeout:',len(slither_timeout))
     print('slither_compileError:',len(slither_compileError))
 
-def run(input_dir,output_dir, erc_force = None, process_num = 65):
+def run(input_dir,output_dir, erc_force = None, process_num = 50):
     print('input_dir:',input_dir)
     print('output_dir:',output_dir)
     naga_results_dir = os.path.join(output_dir,'results')
