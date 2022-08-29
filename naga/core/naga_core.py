@@ -30,6 +30,8 @@ class NagaCore():
         self._entry_contract = entry_contract
         return self._entry_contract
 
+
+
     def detect_entry_contract(self):
         self._detect(self.entry_contract)
 
