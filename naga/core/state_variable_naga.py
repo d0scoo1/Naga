@@ -58,7 +58,8 @@ class DMethod(Enum): # detection method
 class StateVarN():
     def __init__(self,svar, label = None, dType = None,external = False,callers = []):
         self.svar = svar
-        self.name = svar.canonical_name
+        self.name = svar.name
+        self.canonical_name = svar.canonical_name
         self.label:VarLabel = label
         self.rw = [0,0,0,0]
         self.dType:DType = dType

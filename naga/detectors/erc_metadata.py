@@ -112,11 +112,9 @@ def _totalSupply_not_limited(self,condition_nodes, total_supply):
     只要totalSupply 出现在 require 中，并且require 中 其他的 uint 变量是不可写的
     '''
     for n in condition_nodes:
-        if total_supply in n.state_variables_read:
+        if total_supply in n.state_variables_read and 'add' or '+' in str(n.expression):
             for svar in n.state_variables_read:
-                
                 if svar == total_supply: continue
-                
                 if str(svar.type).startswith('uint') and self.svar_written_functions(svar) != []:
                     return True
             return False
