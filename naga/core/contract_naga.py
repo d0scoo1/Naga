@@ -136,7 +136,7 @@ class ContractN():
         self.token_written_functions: List["FunctionN"] = [] # 接口中定义的用户的写函数，我们通过这些函数来判定一个 owner 是否为 bwList 或 paused
 
         for f in self.contract.functions_entry_points: # functions_declared():
-            f = FunctionN(f)
+            f = FunctionN(f,self)
             self.functions.append(f)
             if len(f.function.all_state_variables_read()) > 0:
                 self.state_var_read_functions.append(f)

@@ -53,10 +53,14 @@ class NagaCore():
     def _detect(self,contractN:ContractN):
         if not contractN.is_analyzed:
             contractN.analyze()
-        if contractN.is_erc != None:
+        if contractN.is_erc:
             for D in self.detectors:
                 d = D(self, contractN)
                 d.detect()
                 contractN.detectors.append(d)
+        else:
+            d = self.detectors[-1](self, contractN) # 否则直接调用最后一个检测 event
+            d.detect()
+            contractN.detectors.append(d)
 
 

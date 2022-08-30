@@ -109,6 +109,20 @@ def events(self):
             summary['LE_rw'][self.svarn_pool[svar].rw_str].append({"function":f.function.full_name, "svar":svar.name})
     return summary
 
+
+def andand_conditions(self):
+    andand_if = []
+    andand_require = []
+
+    for f in self.functions:
+        andand_if = [str(n) for n in f.andand_if_nodes]
+        andand_require = [str(n) for n in f.andand_require_nodes]
+        
+    return {
+        'andand_if': andand_if,
+        'andand_require': andand_require,
+    }
+
 def collect_summary(self):
     #for d in self.detectors:
     #    self.summary.update(d.summary())
@@ -118,3 +132,4 @@ def collect_summary(self):
     self.summary.update(modifiers(self))
     self.summary.update(events(self))
     #self.summary.update(functions(self))
+    self.summary.update(andand_conditions(self))

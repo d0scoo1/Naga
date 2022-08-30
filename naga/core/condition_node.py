@@ -1,4 +1,3 @@
-from telnetlib import PRAGMA_HEARTBEAT
 from slither.core.cfg.node import Node, NodeType
 from slither.slithir.operations.binary import (Binary,BinaryType)
 from slither.core.solidity_types.elementary_type import ElementaryType
@@ -30,7 +29,7 @@ def _get_condition_depVars(node:Node,msg:str,params2agrs) -> List:
     else:
         return [ConditionNode(node,node.irs_ssa[-1].read,msg,params2agrs)] #依赖条件直接为require 的 read
 
-def get_require(node:Node,params2agrs) -> List:
+def get_require(node:Node,fn) -> List:
     if not any(c.name in ["require(bool)", "require(bool,string)"] for c in node.solidity_calls):
         return []
     
@@ -38,13 +37,17 @@ def get_require(node:Node,params2agrs) -> List:
     read_vars = node.irs_ssa[-1].read
     if len(read_vars) == 2:
         msg = read_vars[1]
-    return _get_condition_depVars(node,msg,params2agrs)
+    conds = _get_condition_depVars(node,msg,fn.params2agrs)
+    if len(conds) > 1: fn.andand_if_nodes.append(node) # 如果有多个 require，则记录下来
+    return conds
 
-def get_if(node:Node,params2agrs) -> List:
+def get_if(node:Node,fn) -> List:
     if node.type not in [NodeType.IF, NodeType.IFLOOP]:
         return []
     msg = 'if_statement'
-    return _get_condition_depVars(node,msg,params2agrs)
+    conds = _get_condition_depVars(node,msg,fn.params2agrs)
+    if len(conds) > 1: fn.andand_if_nodes.append(node) # 如果有多个 require，则记录下来
+    return conds
 
 from slither.slithir.variables import (
     Constant,

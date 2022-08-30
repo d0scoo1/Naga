@@ -28,13 +28,15 @@ from slither.core.variables.variable import Variable
 from slither.core.variables.state_variable import StateVariable
 
 
+
 from .condition_node import (get_require, get_if, ConditionNode)
 from .node_naga import NodeN
 from .variable_group import (VariableGroup, var_group_combine)
 
 class FunctionN():
-    def __init__(self, function: FunctionContract):
+    def __init__(self, function: FunctionContract, cn):
         #self.__dict__.update(function.__dict__)
+        self.cn = cn
         self.function:"FunctionContract" = function
         self._all_require_nodes:List["Node"] = None
         self._all_if_nodes:List["Node"] = None
@@ -50,6 +52,8 @@ class FunctionN():
         self._return_var_group:"VariableGroup" = None
 
         self.params2agrs = _get_params2agrs(self.function) # 映射外部参数到 args
+        self.andand_if_nodes:List["Node"] = []
+        self.andand_require_nodes:List["Node"] = []
 
         #self.owners:List["Variable"] = [] # 如果不为空，则说明只能由 owner 写入
         #self._state_vars_read_in_requires:List["StateVariable"] = None
@@ -97,7 +101,7 @@ class FunctionN():
             return self._require_conditions
         self._require_conditions = []
         for node in self.all_require_nodes:
-            self._require_conditions += get_require(node, self.params2agrs)
+            self._require_conditions += get_require(node, self)
         return self._require_conditions
 
             
@@ -106,7 +110,7 @@ class FunctionN():
         if self._if_conditions is None:
             self._if_conditions = []
             for node in self.all_if_nodes:
-                self._if_conditions += get_if(node, self.params2agrs)
+                self._if_conditions += get_if(node, self)
         return self._if_conditions
 
     @property
@@ -126,6 +130,10 @@ class FunctionN():
             if condition.exist_oror:
                 exist_oror_conditions.append(condition)
         return exist_oror_conditions
+
+    @property
+    def andand_condition_nodes(self)->List["Node"]:
+        return self.andand_require_nodes + self.andand_if_nodes
 
     @property
     def owner_candidates(self) -> List["Variable"]:
@@ -176,8 +184,7 @@ def _get_params2agrs(f):
         for node in f.all_nodes():
             for ir in node.irs_ssa:
                 if isinstance(ir, (InternalCall,HighLevelCall)):
-                    params2args = {} # 绑定参数和args
-                    if len(ir.arguments) <= len(ir.function.parameters):
+                    if isinstance(ir.function,FunctionContract) and len(ir.arguments) <= len(ir.function.parameters):
                         for arg_index in range(0,len(ir.arguments)):
                             arg = ir.arguments[arg_index]
                             param = ir.function.parameters[arg_index]
