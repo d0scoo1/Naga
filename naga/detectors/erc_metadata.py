@@ -92,32 +92,32 @@ def _detect_VS(self):
         # owner 保护的 totalSupply 写函数
         written_functions = self.svar_written_functions(svar) # totalSupply = totalSupply + amount
         read_functions = self.state_var_read_functions_dict[svar] # totalSupply.add(amount)
-
-        for f in written_functions:
-            for n in f.function.nodes:
-                if '+' in str(n.expression) and not 'require' in str(n.expression):
-                    if _totalSupply_not_limited(self,f.all_condition_nodes,svar):
-                        self.update_svarn_label(svar,VarLabel._totalSupply,DType.VULNERABLE_SCARCITY,DMethod.DEPENDENCY)
-                        break
         
-        for f in read_functions:
-            for n in f.function.nodes:
-                if '.add' in str(n.expression) and not 'require' in str(n.expression):
-                    if _safeMath_add(n.irs_ssa,svar) and _totalSupply_not_limited(self,f.all_condition_nodes,svar):
-                        self.update_svarn_label(svar,VarLabel._totalSupply,DType.VULNERABLE_SCARCITY,DMethod.DEPENDENCY)
-                        break
 
-def _totalSupply_not_limited(self,condition_nodes, total_supply):
+        for f in list(set(written_functions + read_functions) & set(self.owner_in_condition_functions)): # owner 函数
+            for n in f.function.nodes:
+                sn = str(n.expression)
+                if not 'require' in sn and str(svar.name) in sn and ('+' in sn or '.add(' in sn):
+                    if not _totalSupply_limited(self,f.require_conditions,svar):
+                        self.update_svarn_label(svar,VarLabel._totalSupply,DType.VULNERABLE_SCARCITY,DMethod.DEPENDENCY)
+                        return
+
+
+
+def _totalSupply_limited(self,condition_nodes, total_supply):
     '''
-    只要totalSupply 出现在 require 中，并且require 中 其他的 uint 变量是不可写的
+    从以下方面判断约束： 
+        如果 require 依赖一个 local variable，那么跳过, 
+        如果 require 中存在一个 bool 变量，则需要检测 bool 变量的写函数个数 > 1 则跳过
+        如果 require 中存在其他变量，则需要检测 uint 变量的写函数个数 > 0 则跳过
     '''
     for n in condition_nodes:
-        if total_supply in n.state_variables_read and ('add' or '+') in str(n.expression):
-            for svar in n.state_variables_read:
-                if svar == total_supply: continue
-                if str(svar.type).startswith('uint') and self.svar_written_functions(svar) != []:
-                    return True
-            return False
+        #if n.dep_vars_groups.local_vars != []: continue
+        for svar in n.dep_vars_groups.state_vars:
+            if str(svar.type) == 'bool' and  len(self.svar_written_functions(svar)) == 1: return True
+        
+        for svar in n.dep_vars_groups.state_vars:
+            if svar != total_supply and str(svar.type).startswith('uint') and len(self.svar_written_functions(svar)) == 0: return True
     return False
 
 

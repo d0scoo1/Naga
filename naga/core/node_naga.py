@@ -1,5 +1,6 @@
 from typing import List
 from slither.core.cfg.node import Node,NodeType
+
 from .variable_group import (VariableGroup,var_group_combine)
 from slither.core.declarations import Function
 from slither.slithir.operations import (
@@ -47,17 +48,18 @@ class Caller():
             return [var for var in self.dep_vars_groups.state_vars if str(var.type).startswith("bytes")]
 
 class NodeN():
-    def __init__(self, node:Node, tainted_vars = [],):
-        self.node = node
+    def __init__(self, node:Node, tainted_vars = [],params2agrs = {}):
         self.tainted_vars = tainted_vars
-        self.dep_vars_groups:VariableGroup = node_tracker(self.node,self.tainted_vars)
+        self.node = node
+        self.params2agrs = params2agrs
+        self.dep_vars_groups:VariableGroup = node_tracker(self.node,self.tainted_vars,self.params2agrs)
 
     def __str__(self):
         return "NodeExp: node:{} vars_group:[{}]".format(self.node,self.read_vars_groups)
 
 
-def node_tracker(node:Node, tainted_vars = []):
 
+def node_tracker(node:Node, tainted_vars = [],params2agrs = {}):
     # 删掉无关 node
     dom_candidates = node.function.nodes
     while dom_candidates:
@@ -68,18 +70,18 @@ def node_tracker(node:Node, tainted_vars = []):
     dom_irs = [ir for node in dominators for ir in node.irs_ssa]
     dep_vars, callers = dep_tracker(tainted_vars,dom_irs,{node.function.full_name})
 
-    return VariableGroup(dep_irs_ssa = dep_vars, callers = callers)
+    return VariableGroup(dep_irs_ssa = dep_vars, callers = callers,params2agrs=params2agrs)
 
 
 ##### Data-dependency Analysis Engine #####
 
-def dep_tracker(tainted_vars = [], dom_irs = [], walked_functions = set(), is_call = False, callers = {}):
-
+def dep_tracker(tainted_vars = [], dom_irs = [], walked_functions = set(), callers = {}):
     '''
     callers 是一个 dict, key 是 变量名称， value 是一个 variableGroup，记录了调用者的依赖信息
     这里 caller 有两种情况：1.依赖一个 local variable, 这种情况，我们认为是可变的。2. 依赖一个 state variable, 这时，caller 是否可变由这个 svar 的读写来决定
     '''
     #for ir in dom_irs: print('ir :{}'.format(ir))
+    #print('tainted_vars: {}'.format(tainted_vars))
     
     if len(dom_irs) == 0: return [],{}
 
@@ -92,16 +94,17 @@ def dep_tracker(tainted_vars = [], dom_irs = [], walked_functions = set(), is_ca
 
     while dom_irs:
         ir = dom_irs.pop()
+        #print('ir :{}, {}'.format(ir,ir.lvalue))
         
-        if isinstance(ir,NO_LVALUE_OPERATIONS): continue
+        if isinstance(ir,NO_LVALUE_OPERATIONS): continue ####
         
         lval = ir.lvalue
         if lval in dep_vars: dep_vars.remove(lval)
         else: continue
         #print(ir, list2str(ir.read))
+        
         if isinstance(ir, (InternalCall,HighLevelCall)):
             #print("----internalcall",ir.function.full_name)
-            if not is_call: dep_vars += ir.arguments # 对于首个调用函数，我们把参数也加入到 dep_vars 中
             if ir.function in walked_functions: continue
             walked_functions.add(ir.function)
             dep_vars += call_track(ir,dom_irs.copy(),walked_functions,callers)
@@ -116,11 +119,12 @@ def highLevelCall_dom_tracker(call_ir:HighLevelCall,r_dom_irs, walked_functions,
     #walked_functions.add(call_ir.function)
     tainted_ir = call_ir.destination
     #print('tainted_ir: {}'.format(tainted_ir))
-    dom_vars, t_callers = dep_tracker([tainted_ir],r_dom_irs,walked_functions,True, callers)
+    dom_vars, t_callers = dep_tracker([tainted_ir],r_dom_irs,walked_functions, callers)
     return dom_vars
 
 def call_track(call_ir,r_dom_irs, walked_functions,callers):
     '''
+    call_track 会把函数的入参也传进去，但是 variable_group 中加入了 params2agrs, 用于过滤这些参数
     call_ir: call
     r_dom_irs: rest of dom_ir 还未检测的 irs，用于追踪 call 的调用者
     '''
@@ -142,7 +146,7 @@ def call_track(call_ir,r_dom_irs, walked_functions,callers):
     for ir in dom_irs:
         index += 1
         if isinstance(ir, Return):
-            t_dep_vars, t_callers = dep_tracker(ir.read, dom_irs[0:index],walked_functions,True)
+            t_dep_vars, t_callers = dep_tracker(ir.read, dom_irs[0:index],walked_functions)
             # 这些变量都受到了调用者的影响
             _add_dom_caller(t_dep_vars, dom_caller, callers)
             dep_vars += t_dep_vars
@@ -167,7 +171,7 @@ def call_track(call_ir,r_dom_irs, walked_functions,callers):
                 if isinstance(ir,NO_LVALUE_OPERATIONS):
                     continue
                 if ir.lvalue is not None and ir.lvalue.non_ssa_version == ret_val:
-                    t_dep_vars, t_callers = dep_tracker([ir.lvalue], dom_irs[0:index],walked_functions,True)
+                    t_dep_vars, t_callers = dep_tracker([ir.lvalue], dom_irs[0:index],walked_functions)
                     _add_dom_caller(t_dep_vars, dom_caller, callers)
                     dep_vars += t_dep_vars
     return dep_vars

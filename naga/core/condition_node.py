@@ -1,3 +1,4 @@
+from telnetlib import PRAGMA_HEARTBEAT
 from slither.core.cfg.node import Node, NodeType
 from slither.slithir.operations.binary import (Binary,BinaryType)
 from slither.core.solidity_types.elementary_type import ElementaryType
@@ -6,7 +7,7 @@ from slither.core.declarations import SolidityVariableComposed
 from slither.core.variables.variable import Variable
 from typing import List
 
-def _get_condition_depVars(node:Node,msg:str) -> List:
+def _get_condition_depVars(node:Node,msg:str,params2agrs) -> List:
     '''
     The condition statement could have more than one condition, connected by AND &&, which is equal to multiple requires.
     We divide the requires into multiple requires by &&.
@@ -25,11 +26,11 @@ def _get_condition_depVars(node:Node,msg:str) -> List:
     r_node_conds = [ v for v in r_vars if v not in l_vars]
     # 如果没有 && 条件，则直接为空
     if len(r_node_conds) != 0: # 存在 && 条件
-        return [ConditionNode(node, [rnc], msg) for rnc in r_node_conds] # 设置为多个 require
+        return [ConditionNode(node, [rnc], msg, params2agrs) for rnc in r_node_conds] # 设置为多个 require
     else:
-        return [ConditionNode(node,node.irs_ssa[-1].read,msg)] #依赖条件直接为require 的 read
+        return [ConditionNode(node,node.irs_ssa[-1].read,msg,params2agrs)] #依赖条件直接为require 的 read
 
-def get_require(node:Node) -> List:
+def get_require(node:Node,params2agrs) -> List:
     if not any(c.name in ["require(bool)", "require(bool,string)"] for c in node.solidity_calls):
         return []
     
@@ -37,22 +38,33 @@ def get_require(node:Node) -> List:
     read_vars = node.irs_ssa[-1].read
     if len(read_vars) == 2:
         msg = read_vars[1]
-    return _get_condition_depVars(node,msg)
+    return _get_condition_depVars(node,msg,params2agrs)
 
-def get_if(node:Node) -> List:
+def get_if(node:Node,params2agrs) -> List:
     if node.type not in [NodeType.IF, NodeType.IFLOOP]:
         return []
     msg = 'if_statement'
-    return _get_condition_depVars(node,msg)
+    return _get_condition_depVars(node,msg,params2agrs)
+
+from slither.slithir.variables import (
+    Constant,
+    LocalIRVariable,
+    ReferenceVariable,
+    StateIRVariable,
+    TemporaryVariable,
+    TupleVariable,
+)
+
+
 
 from .node_naga import NodeN
 
 class ConditionNode(NodeN):
-    def __init__(self, node:Node, condition_read:Variable, msg:str):
+    def __init__(self, node:Node, condition_read:Variable, msg:str,params2agrs:dict={}):
         self.condType:NodeType = node.type # 使用 node 的 type 作为 condType
         self.condition_read:List = condition_read # 每个 require 我们只关心一个 condition
         self.msg:str = msg # require 还包含一个 message
-        super().__init__(node,tainted_vars = self.condition_read)
+        super().__init__(node,tainted_vars = self.condition_read,params2agrs=params2agrs)
 
         self.owner_candidates = self._get_owner_candidates()
     
@@ -65,7 +77,7 @@ class ConditionNode(NodeN):
         """
         如果 dep_vars_groups 中 local_vars 为空，state_vars 中有 address 或 mapping(address => bool)，且 solidity_vars 中存在一个 msg.sender，则我们认为它可能是 owner
         """
-
+        
         if len(self.dep_vars_groups.local_vars) > 0 or SolidityVariableComposed('msg.sender') not in self.dep_vars_groups.solidity_vars:
             return []
 

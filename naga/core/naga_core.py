@@ -42,20 +42,18 @@ class NagaCore():
     
     def detect_all_entry_contracts(self,erc_force = None):
         for c in self.entry_contracts:
-            if erc_force is not None:
-                c.is_erc = erc_force
+            c.erc_force = erc_force
             self._detect(c)
 
 
     def detect_entry_contract(self,erc_force = None):
-        if erc_force is not None:
-            self.entry_contract.is_erc = erc_force
+        self.entry_contract.erc_force = erc_force
         self._detect(self.entry_contract)
 
     def _detect(self,contractN:ContractN):
         if not contractN.is_analyzed:
             contractN.analyze()
-        if contractN.is_erc:
+        if contractN.is_erc != None:
             for D in self.detectors:
                 d = D(self, contractN)
                 d.detect()

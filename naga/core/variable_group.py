@@ -21,7 +21,7 @@ class VariableGroup():
     '''
     一个 node 可能依赖一组变量，我们使用这个类来管理这些变量
     '''
-    def __init__(self, all_vars = None,dep_irs_ssa = None, callers = {}):
+    def __init__(self, all_vars = None,dep_irs_ssa = None, callers = {},params2agrs = {}):
         super().__init__()
         self.all_vars = all_vars
         self.dep_irs_ssa = dep_irs_ssa
@@ -31,6 +31,7 @@ class VariableGroup():
         self.constant_vars = []
         self.other_vars = []
         self.callers = callers # 依赖的变量可能是由 High Level 函数产生的，这里保存调用者信息
+        self.params2agrs = params2agrs # 参数到参数的映射
         self.__divide_vars()
 
     def __divide_vars(self):
@@ -49,6 +50,11 @@ class VariableGroup():
                     var_unhashable.append(v)
             self.all_vars = list(var_hashable) + var_unhashable
         
+        for i in range(len(self.all_vars)):
+            v = self.all_vars[i]
+            if isinstance(v,LocalVariable) and v in self.params2agrs:
+                self.all_vars[i] = self.params2agrs[v]
+
         for v in self.all_vars:
             if isinstance(v,StateVariable):
                 self.state_vars.append(v)

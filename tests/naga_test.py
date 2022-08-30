@@ -63,13 +63,10 @@ class NagaTest():
             return
 
         # 设置合约为强制 ERC 模式
-        entry_c.erc_force = self.contract['erc_force']
+        naga.detect_entry_contract(self.contract['erc_force'])
+        n_end_time = time.time()
         self.contract['erc'] = entry_c.erc
 
-        #TODO: 对于非 ERC 合约只检测 AC 和 ME
-
-        naga.detect_entry_contract()
-        n_end_time = time.time()
         self.contract['naga_test_cost'] = n_end_time - n_start_time
 
         self.contract['entry_sol_file'] = entry_c.contract.source_mapping['filename_used'][len(self.contracts_dir)+1:]

@@ -12,10 +12,21 @@ from slither.core.declarations import (
         SolidityVariable,
         SolidityVariableComposed,
 )
+from slither.slithir.variables import (
+    Constant,
+    LocalIRVariable,
+    ReferenceVariable,
+    StateIRVariable,
+    TemporaryVariable,
+    TupleVariable,
+)
+
+from slither.slithir.operations import (
+    HighLevelCall,Index,InternalCall,EventCall,Length,LibraryCall,LowLevelCall,Member,OperationWithLValue,Phi,PhiCallback,SolidityCall,Return,Operation,Condition,Transfer)
 
 from slither.core.variables.variable import Variable
 from slither.core.variables.state_variable import StateVariable
-from slither.slithir.operations.event_call import EventCall
+
 
 from .condition_node import (get_require, get_if, ConditionNode)
 from .node_naga import NodeN
@@ -38,6 +49,8 @@ class FunctionN():
         self._return_nodes:List["Node"] = None
         self._return_var_group:"VariableGroup" = None
 
+        self.params2agrs = _get_params2agrs(self.function) # 映射外部参数到 args
+
         #self.owners:List["Variable"] = [] # 如果不为空，则说明只能由 owner 写入
         #self._state_vars_read_in_requires:List["StateVariable"] = None
         #self._local_vars_read_in_requires = None
@@ -46,6 +59,7 @@ class FunctionN():
     @property
     def is_constructor_or_initializer(self) -> bool:
         return self.function.is_constructor or 'init' in str(self.function.name).lower() or 'constructor' in str(self.function.name).lower()
+
 
     @property
     def all_require_nodes(self) -> List["Node"]:
@@ -69,6 +83,7 @@ class FunctionN():
                     nodes.append(node)
             self._all_if_nodes = nodes
         return self._all_if_nodes
+
     
     @property
     def all_condition_nodes(self) -> List["Node"]:
@@ -82,15 +97,16 @@ class FunctionN():
             return self._require_conditions
         self._require_conditions = []
         for node in self.all_require_nodes:
-            self._require_conditions += get_require(node)
+            self._require_conditions += get_require(node, self.params2agrs)
         return self._require_conditions
 
+            
     @property
     def if_conditions(self) -> List["ConditionNode"]:
         if self._if_conditions is None:
             self._if_conditions = []
             for node in self.all_if_nodes:
-                self._if_conditions += get_if(node)
+                self._if_conditions += get_if(node, self.params2agrs)
         return self._if_conditions
 
     @property
@@ -100,7 +116,7 @@ class FunctionN():
         '''
         
         if self._conditions is None:
-            self._conditions = self.require_conditions # + self.if_conditions
+            self._conditions = self.require_conditions# + self.if_conditions
         return self._conditions
     
     @property
@@ -154,3 +170,22 @@ class FunctionN():
     @property
     def name(self) -> str:
         return self.function.name
+
+def _get_params2agrs(f):
+        params2args = {} # 绑定参数和args
+        for node in f.all_nodes():
+            for ir in node.irs_ssa:
+                if isinstance(ir, (InternalCall,HighLevelCall)):
+                    params2args = {} # 绑定参数和args
+                    if len(ir.arguments) <= len(ir.function.parameters):
+                        for arg_index in range(0,len(ir.arguments)):
+                            arg = ir.arguments[arg_index]
+                            param = ir.function.parameters[arg_index]
+
+                            if isinstance(arg,(StateIRVariable,LocalIRVariable)):
+                                arg = arg._non_ssa_version
+                            if isinstance(param,(StateIRVariable,LocalIRVariable)):
+                                param = arg._non_ssa_version
+                            params2args[param] = arg
+
+        return params2args
