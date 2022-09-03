@@ -21,6 +21,7 @@ ERC721_STATE_VARIAVLES = [
     (VarLabel._tokenApprovals,DType.ASSET,'getApproved(uint256)','mapping(address => uint256)',['tokenapprovals','tokenapproval']),
     (VarLabel._operatorApprovals,DType.ASSET,'isApprovedForAll(address, address)','mapping(address => mapping(address => bool))',['operatorapprovals','operatorapproval']),
     (VarLabel._uri,DType.METADATA,'tokenURI(uint256)','string',['baseuri','uri'])
+    #(VarLabel._uri,DType.METADATA,'baseuri()','string',['baseuri','uri'])
 ]
 
 ERC1155_STATE_VARIAVLES = [

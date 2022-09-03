@@ -158,11 +158,21 @@ def _detect_blacklist(self):
     for svar in blacklist_candidates:
         if not _is_written_by_other_owner(svar,owners,self.svar_written_functions(svar)):
             continue
+        for cond in twf_conditions:
+            if svar in cond.dep_vars_groups.state_vars:
+                if "!" in str(cond.node.expression) and "False" not in str(cond.node.expression):
+                    self.update_svarn_label(svar,VarLabel.blacklist,DType.LIMITED_LIQUIDITY,DMethod.DEPENDENCY)
+                    break
+                elif "!" not in str(cond.node.expression) and "False" in str(cond.node.expression):
+                    self.update_svarn_label(svar,VarLabel.blacklist,DType.LIMITED_LIQUIDITY,DMethod.DEPENDENCY)
+                    break
+        '''
         if any(
             svar in cond.dep_vars_groups.state_vars
             for cond in twf_conditions
-        ): # 如果出现在 token_written_functions 中，注意，这里并没有校验 msg.sender # SolidityVariableComposed('msg.sender') in cond.dep_vars_groups.solidity_vars 
+        ): 
             self.update_svarn_label(svar,VarLabel.blacklist,DType.LIMITED_LIQUIDITY,DMethod.DEPENDENCY)
+        '''
 
 def _set_owner_in_condition_functions(self):
 
