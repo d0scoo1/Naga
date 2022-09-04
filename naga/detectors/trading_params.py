@@ -8,7 +8,7 @@ def detect_trading_params(self):
     '''
     # self.token_written_functions
     # 用户只读变量中，无 label 的 int 变量
-    candidates = [svar for svar in self.get_svars_by_label() if str(svar.type).startswith('uint')]
+    candidates = [svar for svar in self.get_svars_by_label() if str(svar.type).startswith('uint') and '[' not in str(svar.type)]
 
     trading_params = []
     # 检查变量是否出现在交易函数中
