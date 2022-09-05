@@ -183,6 +183,7 @@ class ContractN():
     # svars_pool
     def update_svarn_label(self, svar, v_lable: VarLabel, d_type:DType,d_method:DMethod,caller_dict = {}):
         if svar not in self.svarn_pool:
+            print("update_svarn_label: svar not in svarn_pool")
             callers = []
             if svar in caller_dict: callers = caller_dict[svar]
             ex_svarn = StateVarN(svar,external = True, callers = callers)
@@ -199,6 +200,12 @@ class ContractN():
 
     def get_svars_by_dtype(self, d_type:DType = None):
         return [svar for svar in self.svarn_pool if self.svarn_pool[svar].dType == d_type and not self.svarn_pool[svar].external]
+
+    def get_all_svars_by_label(self, v_lable: VarLabel = None):
+        return [svar for svar in self.svarn_pool if self.svarn_pool[svar].label == v_lable]
+
+    def get_all_svars_by_dtype(self, d_type:DType = None):
+        return [svar for svar in self.svarn_pool if self.svarn_pool[svar].dType == d_type]
 
     def update_external_svarn_rw(self,svarn):
         """

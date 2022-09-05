@@ -264,7 +264,7 @@ def _divde_state_vars(self):
     for f in self.state_var_read_functions:
         svars = f.function.all_state_variables_read()
         svars_read += svars
-        if f.is_constructor_or_initializer: continue
+        if f.is_constructor_or_initializer: svars_owner_read += svars
         if f in self.owner_in_condition_functions: svars_owner_read += svars
         else: svars_user_read += svars
     svars_read = list(set(svars_read))
@@ -274,12 +274,17 @@ def _divde_state_vars(self):
     for f in self.state_var_written_functions:
         svars = f.function.all_state_variables_written()
         svars_written += svars
-        if f.is_constructor_or_initializer: continue
+        if f.is_constructor_or_initializer: continue # 
         if f in self.owner_in_condition_functions: svars_owner_updated += svars
         else: svars_user_written += svars
     svars_written = list(set(svars_written))
     svars_user_written = list(set(svars_user_written))
     svars_owner_updated = list(set(svars_owner_updated))
+
+    # 将交易函数中的变量也加入到 svars_user_read 中
+    for f in self.token_written_functions:
+        svars_user_read += f.function.all_state_variables_read()
+        svars_user_written += f.function.all_state_variables_written()
 
     svars_user_only_read = list(set(svars_user_read)-set(svars_user_written))
     svars_user_only_read_owner_updated = list(set(svars_user_only_read) & set(svars_owner_updated))

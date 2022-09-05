@@ -61,6 +61,9 @@ class NodeN():
 
 def node_tracker(node:Node, tainted_vars = [],params2agrs = {}):
     # 删掉无关 node
+    
+    #if 'RETURN' not in str(node): return VariableGroup()
+    #print('node_tracker: node:{}'.format(node))
     dom_candidates = node.function.nodes
     while dom_candidates:
         if node == dom_candidates.pop(): break
@@ -80,6 +83,7 @@ def dep_tracker(tainted_vars = [], dom_irs = [], walked_functions = set(), calle
     callers 是一个 dict, key 是 变量名称， value 是一个 variableGroup，记录了调用者的依赖信息
     这里 caller 有两种情况：1.依赖一个 local variable, 这种情况，我们认为是可变的。2. 依赖一个 state variable, 这时，caller 是否可变由这个 svar 的读写来决定
     '''
+    #for f in walked_functions: print('walked_functions: {}'.format(f))
     #for ir in dom_irs: print('ir :{}'.format(ir))
     #print('tainted_vars: {}'.format(tainted_vars))
     
@@ -94,8 +98,6 @@ def dep_tracker(tainted_vars = [], dom_irs = [], walked_functions = set(), calle
 
     while dom_irs:
         ir = dom_irs.pop()
-        #print('ir :{}, {}'.format(ir,ir.lvalue))
-        
         if isinstance(ir,NO_LVALUE_OPERATIONS): continue ####
         
         lval = ir.lvalue
@@ -106,6 +108,7 @@ def dep_tracker(tainted_vars = [], dom_irs = [], walked_functions = set(), calle
         if isinstance(ir, (InternalCall,HighLevelCall)):
             #print("----internalcall",ir.function.full_name)
             if ir.function in walked_functions: continue
+            dep_vars += ir.arguments # 对于调用函数，我们把参数也加入到 dep_vars 中
             walked_functions.add(ir.function)
             dep_vars += call_track(ir,dom_irs.copy(),walked_functions,callers)
         else:

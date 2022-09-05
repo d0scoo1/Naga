@@ -187,7 +187,7 @@ def _count_errors(output_dir):
     print('slither_timeout:',len(slither_timeout))
     print('slither_compileError:',len(slither_compileError))
 
-def run(input_dir,output_dir, erc_force = None, process_num = 50):
+def run(input_dir,output_dir, erc_force = None, process_num = 60):
     print('input_dir:',input_dir)
     print('output_dir:',output_dir)
     naga_results_dir = os.path.join(output_dir,'results')

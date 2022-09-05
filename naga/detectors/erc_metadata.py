@@ -21,7 +21,7 @@ ERC721_STATE_VARIAVLES = [
     (VarLabel._tokenApprovals,DType.ASSET,'getApproved(uint256)','mapping(address => uint256)',['tokenapprovals','tokenapproval']),
     (VarLabel._operatorApprovals,DType.ASSET,'isApprovedForAll(address, address)','mapping(address => mapping(address => bool))',['operatorapprovals','operatorapproval']),
     (VarLabel._uri,DType.METADATA,'tokenURI(uint256)','string',['baseuri','uri']),
-    (VarLabel._uri,DType.METADATA,'baseuri()','string',['baseuri','uri'])
+    (VarLabel._uri,DType.METADATA,'baseURI()','string',['baseuri','uri'])
 ]
 
 ERC1155_STATE_VARIAVLES = [
@@ -59,16 +59,18 @@ def _detect_inheritance(self,token,ERC_METADATA):
                 break
 
 def _detect_getter(self,ERC_METADATA):
+
     for em in ERC_METADATA:
+ 
         #return_funs = [f for f in self.functions if f.function.full_name == em[2]]
-        return_funs = [f for f in self.functions if str(f.function.full_name).lower().replace('_','') == em[2]]
+        return_funs = [f for f in self.functions if str(f.function.full_name).lower().replace('_','') == em[2].lower()]
         if len(return_funs) == 0 : continue
         for return_fun in return_funs:
+            #print(return_fun.return_var_group)
             svars = return_fun.return_var_group.state_vars
             if len(svars) == 0: continue
             if len(svars) == 1:
                 #_set_state_vars_label(self,svars,em[0],em[1],DMethod.GETTER)
-            
                 self.update_svarn_label(svars[0],em[0],em[1],DMethod.GETTER,return_fun.return_var_group.callers)
                 continue
 

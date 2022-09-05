@@ -49,12 +49,12 @@ class VariableGroup():
                 else: 
                     var_unhashable.append(v)
             self.all_vars = list(var_hashable) + var_unhashable
-        
+
         for i in range(len(self.all_vars)):
             v = self.all_vars[i]
             if isinstance(v,LocalVariable) and v in self.params2agrs:
                 self.all_vars[i] = self.params2agrs[v]
-
+ 
         for v in self.all_vars:
             if isinstance(v,StateVariable):
                 self.state_vars.append(v)
