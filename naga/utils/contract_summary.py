@@ -9,7 +9,6 @@ def state_variables(self):
         'multistage_owners': [],
         'svars': [],
     }
-    summary['dominators'] = [svar.name for svar in self.dominators]
     for svar in self.svarn_pool.values(): 
         summary['svars'].append(svar.toJson())
 
@@ -53,7 +52,6 @@ def functions(self):
     return summary
 
 def calls(self):
-
     all_functions = [f for f in self.contract.functions + self.contract.modifiers]
     internal_calls = 0
     external_calls = 0

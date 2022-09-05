@@ -7,7 +7,6 @@ class AccessControl(AbstractDetector):
         _detect_owners(self.cn)
         _detect_blacklist(self.cn)
         _multistage_owners(self.cn)
-        _set_dominators(self.cn)
         _set_owner_in_condition_functions(self.cn)
         _divde_state_vars(self.cn)
 
@@ -185,13 +184,6 @@ def _detect_blacklist(self):
             self.update_svarn_label(svar,VarLabel.blacklist,DType.LIMITED_LIQUIDITY,DMethod.DEPENDENCY)
         '''
 
-def _set_dominators(self):
-    self.dominators = []
-    owners = self.get_svars_by_dtype(DType.ACCESS_CONTROL)
-    for svar in owners:
-        if not _is_written_by_other_owner(svar,owners,self.svar_written_functions(svar)):
-            self.dominators.append(svar)
-            
 
 def _set_owner_in_condition_functions(self):
 
