@@ -11,7 +11,7 @@ from naga.detectors import AccessControl
 ERC20_WRITE_FUNCS_SIG = [
     "transfer(address,uint256)",
     "approve(address,uint256)",
-    "transferFrom(address,address,uint256)"
+    "transferFrom(address,address,uint256)",
 ]
 
 ERC721_WRITE_FUNCS_SIG = [

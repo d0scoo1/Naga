@@ -3,14 +3,13 @@ from naga.core.state_variable_naga import DType, VarLabel, StateVarN, DMethod
 
 def state_variables(self):
     summary = {
-        'svars': [],
+        'dominators':[],
         'svars_detection': {},
         'svars_label': {},
         'multistage_owners': [],
-        'state_variables_label_rw': {},
-        #'state_variables_rw': {},
+        'svars': [],
     }
-
+    summary['dominators'] = [svar.name for svar in self.dominators]
     for svar in self.svarn_pool.values(): 
         summary['svars'].append(svar.toJson())
 
@@ -131,5 +130,5 @@ def collect_summary(self):
     self.summary.update(state_variables(self))
     self.summary.update(modifiers(self))
     self.summary.update(events(self))
-    #self.summary.update(functions(self))
     self.summary.update(andand_conditions(self))
+    self.summary.update(functions(self))

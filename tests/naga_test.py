@@ -132,9 +132,13 @@ def _load_contracts(input_dir,output_dir,erc_force = None):
         if c['address'] in contracts_tested:
             continue
         
+        dataset = 'mainnet'
+        if erc_force != None:
+            dataset = 'tracker'
         contractInfo ={
             'address': c['address'],
             'name': c['name'],
+            'dataset': dataset,
             'compiler': c['compiler'],
             'entry_sol_file': "",
             'slither_compile_cost': 0,

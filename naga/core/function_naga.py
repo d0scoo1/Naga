@@ -120,7 +120,7 @@ class FunctionN():
         '''
         
         if self._conditions is None:
-            self._conditions = self.require_conditions# + self.if_conditions
+            self._conditions = self.require_conditions # + self.if_conditions
         return self._conditions
     
     @property
