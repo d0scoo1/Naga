@@ -160,10 +160,17 @@ def _detect_blacklist(self):
             continue
         for cond in twf_conditions:
             if svar in cond.dep_vars_groups.state_vars:
-                if 'blacklist' in str(cond.node.expression):
+                if 'blacklist' in str(cond.node.expression).lower():
+                    self.update_svarn_label(svar,VarLabel.blacklist,DType.LIMITED_LIQUIDITY,DMethod.DEPENDENCY)
+                    break
+                if any(
+                    svar in cond.dep_vars_groups.state_vars
+                    for cond in twf_conditions
+                ): 
                     self.update_svarn_label(svar,VarLabel.blacklist,DType.LIMITED_LIQUIDITY,DMethod.DEPENDENCY)
                     break
 
+                '''
                 s_andand = str(cond.node.expression).split('&&')
                 exps = []
                 for s in s_andand:
@@ -176,14 +183,7 @@ def _detect_blacklist(self):
                         elif "!" not in exp and "false" in exp:
                             self.update_svarn_label(svar,VarLabel.blacklist,DType.LIMITED_LIQUIDITY,DMethod.DEPENDENCY)
                             break
-        '''
-        if any(
-            svar in cond.dep_vars_groups.state_vars
-            for cond in twf_conditions
-        ): 
-            self.update_svarn_label(svar,VarLabel.blacklist,DType.LIMITED_LIQUIDITY,DMethod.DEPENDENCY)
-        '''
-
+                '''
 
 def _set_owner_in_condition_functions(self):
 
