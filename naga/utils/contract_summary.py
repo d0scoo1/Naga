@@ -13,7 +13,7 @@ def state_variables(self):
         summary['svars'].append(svar.toJson())
 
     for dt in DType: 
-        summary['svars_detection'][dt.value] = [svar.name for svar in self.get_all_svars_by_label(dt)]
+        summary['svars_detection'][dt.value] = [svar.name for svar in self.get_all_svars_by_dtype(dt)]
     for label in VarLabel: 
         summary['svars_label'][label.value] = [svar.name for svar in self.get_all_svars_by_label(label)]
 
@@ -126,7 +126,7 @@ def collect_summary(self):
 
     self.summary.update(calls(self))
     self.summary.update(state_variables(self))
-    #self.summary.update(modifiers(self))
-    #self.summary.update(events(self))
-    #self.summary.update(andand_conditions(self))
-    #self.summary.update(functions(self))
+    self.summary.update(modifiers(self))
+    self.summary.update(events(self))
+    self.summary.update(andand_conditions(self))
+    self.summary.update(functions(self))

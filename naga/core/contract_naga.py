@@ -183,7 +183,6 @@ class ContractN():
     # svars_pool
     def update_svarn_label(self, svar, v_lable: VarLabel, d_type:DType,d_method:DMethod,caller_dict = {}):
         if svar not in self.svarn_pool:
-            print("update_svarn_label: svar not in svarn_pool")
             callers = []
             if svar in caller_dict: callers = caller_dict[svar]
             ex_svarn = StateVarN(svar,external = True, callers = callers)
