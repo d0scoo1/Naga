@@ -50,7 +50,7 @@ You can register your own detectors by adding them to `naga/detectors/`.
 ```python
 slither = Slither(sol_file)
 naga = Naga(slither)
-entry_c = naga.detect_entry_contract()
+entry_c = naga.entry_contract
 naga.detect(entry_c,erc_force=None,detectors=[]) # Specify the detectors you want to use
 entry_c.output(output_file="output.json")
 ```
