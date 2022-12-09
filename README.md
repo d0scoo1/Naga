@@ -42,6 +42,10 @@ naga.detect_entry_contract(er_force=erc_force) # Detect the entry contract
 entry_c = naga.entry_contract # Get the entry contract object
 entry_c.output(output_file="output.json") # Output the result to output.json
 summary = entry_c.output() # Or just get the summary
+
+# You may want know the details of the result. you can print the state variables pool.
+for sk,sv in naga.entry_contract.svarn_pool.items(): 
+    print(sv.canonical_name,sv)
 ```
 
 `naga/detectors/` defines the detectors.
