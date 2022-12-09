@@ -121,8 +121,9 @@ def andand_conditions(self):
     }
 
 def collect_summary(self):
-    #for d in self.detectors:
-    #    self.summary.update(d.summary())
+    for d in self.detectors:
+        if d.summary() != None:
+            self.summary.update(d.summary())
 
     self.summary.update(calls(self))
     self.summary.update(state_variables(self))

@@ -245,9 +245,10 @@ class ContractN():
     from naga.utils import collect_summary
     def output(self,output_file=None):
         self.collect_summary()
-        if output_file is None:
-            return
         self.summary_json = json.dumps(self.summary,indent=2)
+
+        if output_file is None:
+            return self.summary_json
         with open(output_file,'w') as f:
             f.write(self.summary_json)
         return self.summary_json

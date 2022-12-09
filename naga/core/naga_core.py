@@ -15,7 +15,6 @@ class NagaCore():
         self.contract_name = contract_name
         self._entry_contract = None
         self.contracts_analyzed = [] # 已经分析过的合约
-        self.detectors = [LimitedLiquidity,ERCMetadata,TradingParams,MissingEvent]
 
     @property
     def entry_contract(self):
@@ -39,28 +38,37 @@ class NagaCore():
             called_contracts += [d[0] for d in c.all_high_level_calls + c.all_library_calls]
 
         return list(set(contracts_derived)-set(called_contracts))
-    
+
+    def detect(self,contractN,erc_force = None,detectors:List[Callable] = [LimitedLiquidity,ERCMetadata,TradingParams,MissingEvent]):
+        if not contractN.is_analyzed:
+            contractN.analyze()
+        contractN.erc_force = erc_force
+        for D in detectors:
+            d = D(self, contractN)
+            d.detect()
+            contractN.detectors.append(d)
+
     def detect_all_entry_contracts(self,erc_force = None):
         for c in self.entry_contracts:
             c.erc_force = erc_force
-            self._detect(c)
-
+            self._oo_detect(c)
 
     def detect_entry_contract(self,erc_force = None):
         self.entry_contract.erc_force = erc_force
-        self._detect(self.entry_contract)
+        self._oo_detect(self.entry_contract)
 
-    def _detect(self,contractN:ContractN):
+    def _oo_detect(self,contractN:ContractN):
         if not contractN.is_analyzed:
             contractN.analyze()
         if contractN.is_erc:
-            for D in self.detectors:
+            for D in [LimitedLiquidity,ERCMetadata,TradingParams,MissingEvent]:
                 d = D(self, contractN)
                 d.detect()
                 contractN.detectors.append(d)
         else:
-            d = self.detectors[-1](self, contractN) # 否则直接调用最后一个检测 event
+            d = MissingEvent(self, contractN) # 否则直接调用最 Missing event
             d.detect()
             contractN.detectors.append(d)
+    
 
 
