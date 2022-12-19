@@ -58,7 +58,7 @@ entry_c.output(output_file="output.json")
 
 ## Appendix
 ### Dataset
-[Here](https://github.com/d0scoo1/naga_contracts) is a dataset with more than 10,000 contracts.
+[Here](https://github.com/d0scoo1/naga_contracts) is a dataset with more than 100,000 contracts.
 
 ### Set PATH
 Please make sure
