@@ -4,7 +4,6 @@ tests/test.py
 tests/old/*
 crytic-export/*
 analysis/*
-tools/*
 tests/run_naga_test.py
 tests/contracts/*
 tests/slither_test.py
@@ -13,3 +12,4 @@ tests/detection_test.py
 old.naga/*
 old.analysis/*
 analyzer/*
+tools/remove_duplicates.py
