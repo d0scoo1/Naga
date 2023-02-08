@@ -1,0 +1,9 @@
+cff-version: 1.1.0
+message: "A static tool that detects centralized security risks in smart contracts"
+authors:
+  - family-names: Yan
+    given-names: Kailun
+    orcid: https://orcid.org/0000-0003-0216-9793
+title: Naga
+version: v1.0.0-beta.1
+date-released: 2023-02-08
